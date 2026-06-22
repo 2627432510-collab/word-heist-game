@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#100b2e">
+  <meta name="application-name" content="Word Heist: The Broken English Timeline">
+  <meta name="apple-mobile-web-app-title" content="Word Heist">
+  <title>Word Heist: The Broken English Timeline</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%233a287d'/%3E%3Ctext x='50' y='68' text-anchor='middle' font-size='58'%3E%E2%8F%B3%3C/text%3E%3C/svg%3E">
+  <style>
+    :root {
+      --ink: #f8f6ff;
+      --muted: #b9b4d4;
+      --panel: rgba(20, 15, 54, .9);
+      --line: rgba(255,255,255,.13);
+      --gold: #ffd65a;
+      --cyan: #55edff;
+      --green: #74f0a7;
+      --red: #ff6b88;
+      --purple: #a679ff;
+      --shadow: 0 18px 55px rgba(0,0,0,.38);
+    }
+
+    * { box-sizing: border-box; }
+    html { min-height: 100%; background: #0b0822; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+      color: var(--ink);
+      font-family: Inter, ui-rounded, "Trebuchet MS", system-ui, sans-serif;
+      background:
+        radial-gradient(circle at 15% 15%, rgba(83, 57, 179, .35), transparent 28rem),
+        radial-gradient(circle at 82% 28%, rgba(0, 202, 214, .16), transparent 28rem),
+        linear-gradient(160deg, #100b2e 0%, #070619 70%);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .22;
+      background-image: radial-gradient(#fff 1px, transparent 1px);
+      background-size: 34px 34px;
+      mask-image: linear-gradient(to bottom, black, transparent 80%);
+    }
+
+    button, input { font: inherit; }
+    button { -webkit-tap-highlight-color: transparent; }
+    button:focus-visible, input:focus-visible { outline: 3px solid var(--cyan); outline-offset: 3px; }
+    .screen { display: none; min-height: 100vh; position: relative; z-index: 1; }
+    .screen.active { display: block; animation: screenIn .45s ease both; }
+    @keyframes screenIn { from { opacity: 0; transform: translateY(8px); } }
+
+    /* START */
+    #startScreen { overflow: hidden; padding: 28px 18px 50px; }
+    .sky-words { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+    .sky-word {
+      position: absolute;
+      font-family: Georgia, serif;
+      color: rgba(255,255,255,.12);
+      font-weight: 900;
+      animation: drift 10s ease-in-out infinite alternate;
+    }
+    .sky-word:nth-child(1) { left: 4%; top: 18%; font-size: 2rem; }
+    .sky-word:nth-child(2) { right: 5%; top: 12%; font-size: 3rem; animation-delay: -4s; }
+    .sky-word:nth-child(3) { left: 12%; bottom: 12%; font-size: 2.3rem; animation-delay: -7s; }
+    .sky-word:nth-child(4) { right: 12%; bottom: 20%; font-size: 1.8rem; animation-delay: -2s; }
+    @keyframes drift { to { transform: translate(18px, -18px) rotate(4deg); } }
+
+    .start-wrap { width: min(1120px, 100%); margin: 0 auto; }
+    .brand { text-align: center; margin: 5vh auto 30px; max-width: 900px; }
+    .brand-mark {
+      width: 94px; height: 94px; margin: 0 auto 15px;
+      display: grid; place-items: center; font-size: 3.4rem;
+      border-radius: 29px; transform: rotate(4deg);
+      background: linear-gradient(145deg, #5636ad, #1d174a);
+      border: 1px solid rgba(255,255,255,.2);
+      box-shadow: 0 0 55px rgba(138,102,255,.42), inset 0 0 30px rgba(255,255,255,.09);
+      animation: relicFloat 3s ease-in-out infinite;
+    }
+    @keyframes relicFloat { 50% { transform: translateY(-8px) rotate(-3deg); } }
+    .eyebrow { color: var(--cyan); letter-spacing: .18em; text-transform: uppercase; font-size: .74rem; font-weight: 900; }
+    h1 { margin: 9px 0 8px; font-family: Georgia, serif; font-size: clamp(2.4rem, 7vw, 5.5rem); line-height: .94; letter-spacing: -.05em; }
+    .broken { color: var(--gold); text-shadow: 0 0 25px rgba(255,214,90,.3); }
+    .subtitle { color: #d8d2f5; font-size: clamp(1rem, 2.4vw, 1.35rem); font-weight: 700; }
+    .start-grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 18px; align-items: stretch; }
+    .glass {
+      background: linear-gradient(145deg, rgba(34,26,79,.91), rgba(15,12,43,.91));
+      border: 1px solid var(--line); border-radius: 26px; box-shadow: var(--shadow);
+    }
+    .setup-card, .how-card { padding: clamp(22px, 4vw, 34px); }
+    .card-title { margin: 0 0 7px; font-family: Georgia, serif; font-size: 1.5rem; }
+    .card-copy { margin: 0 0 20px; color: var(--muted); line-height: 1.55; }
+    .name-list { display: grid; gap: 10px; }
+    .name-row { display: grid; grid-template-columns: 46px 1fr; gap: 10px; align-items: center; }
+    .avatar-orb { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; background: var(--avatar); font-size: 1.35rem; box-shadow: 0 0 22px color-mix(in srgb, var(--avatar) 45%, transparent); }
+    .name-input { width: 100%; padding: 13px 15px; color: white; border: 1px solid var(--line); border-radius: 13px; background: rgba(3,2,18,.52); }
+    .setup-actions { display: flex; gap: 10px; margin: 13px 0 20px; }
+    .small-btn { border: 1px solid var(--line); color: white; background: rgba(255,255,255,.07); padding: 9px 13px; border-radius: 11px; cursor: pointer; }
+    .small-btn:hover:not(:disabled) { background: rgba(255,255,255,.14); }
+    button:disabled { opacity: .35; cursor: not-allowed; }
+    .primary {
+      width: 100%; border: 0; border-radius: 15px; padding: 15px 18px; cursor: pointer;
+      color: #18102c; font-weight: 950; letter-spacing: .02em;
+      background: linear-gradient(100deg, var(--gold), #ff9f56);
+      box-shadow: 0 9px 28px rgba(255,185,70,.24);
+      transition: transform .18s ease, filter .18s ease;
+    }
+    .primary:hover { transform: translateY(-2px); filter: brightness(1.06); }
+    .how-steps { display: grid; gap: 14px; margin-top: 18px; }
+    .how-step { display: grid; grid-template-columns: 43px 1fr; gap: 12px; align-items: start; }
+    .step-icon { width: 43px; height: 43px; display: grid; place-items: center; border-radius: 13px; background: rgba(85,237,255,.1); border: 1px solid rgba(85,237,255,.2); }
+    .how-step strong { display: block; margin: 2px 0 3px; }
+    .how-step span { color: var(--muted); font-size: .9rem; line-height: 1.4; }
+    .story-strip { margin-top: 18px; padding: 15px 20px; border-radius: 16px; color: #d7d3ee; text-align: center; border: 1px dashed rgba(255,255,255,.18); background: rgba(0,0,0,.13); }
+
+    /* GAME */
+    #gameScreen { padding: 15px; }
+    .topbar { width: min(1460px, 100%); margin: 0 auto 12px; display: flex; justify-content: space-between; gap: 14px; align-items: center; }
+    .mini-brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .mini-logo { width: 42px; height: 42px; flex: none; display: grid; place-items: center; border-radius: 13px; background: #3a287d; }
+    .mini-brand strong { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mini-brand span { display: block; color: var(--muted); font-size: .75rem; }
+    .turn-pill { display: flex; align-items: center; gap: 9px; color: #1d1530; background: var(--gold); padding: 9px 14px; border-radius: 999px; font-weight: 900; white-space: nowrap; }
+    .turn-dot { width: 9px; height: 9px; border-radius: 50%; background: #1d1530; animation: blink 1.2s infinite; }
+    @keyframes blink { 50% { opacity: .25; } }
+    .game-layout { width: min(1460px, 100%); margin: auto; display: grid; grid-template-columns: minmax(0, 1fr) 325px; gap: 13px; }
+    .main-column { min-width: 0; display: grid; gap: 13px; }
+    .timeline-card { padding: 17px 18px 14px; overflow: hidden; }
+    .section-kicker { color: var(--muted); font-size: .74rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 900; }
+    .timeline { display: grid; grid-template-columns: repeat(5, minmax(130px,1fr)); gap: 8px; margin-top: 11px; position: relative; }
+    .timeline::before { content: ""; position: absolute; left: 4%; right: 4%; top: 47px; height: 3px; background: linear-gradient(90deg,#30623e,#742b45,#65328e,#234c91,#20aeb8); opacity: .55; }
+    .zone { min-height: 101px; padding: 10px 8px 8px; position: relative; text-align: center; border-radius: 15px; border: 1px solid rgba(255,255,255,.11); background: linear-gradient(145deg, color-mix(in srgb,var(--zone) 33%,#15102e), #100c29); transition: .3s ease; }
+    .zone.current { transform: translateY(-3px); border-color: color-mix(in srgb,var(--zone) 70%,white); box-shadow: 0 0 28px color-mix(in srgb,var(--zone) 43%,transparent); }
+    .zone.repaired { background: linear-gradient(145deg, color-mix(in srgb,var(--zone) 55%,#15102e), #122539); }
+    .zone.repaired::after { content: "✓"; position: absolute; right: 7px; top: 7px; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; color: #08341b; background: var(--green); font-weight: 1000; }
+    .crystal { display: block; width: 29px; height: 37px; margin: 0 auto 7px; clip-path: polygon(50% 0,100% 31%,79% 100%,20% 100%,0 31%); background: linear-gradient(135deg,#fff,var(--zone) 48%,#151133); filter: drop-shadow(0 0 9px var(--zone)); transform: rotate(4deg); }
+    .zone.repaired .crystal { background: linear-gradient(135deg,#fff,var(--green)); filter: drop-shadow(0 0 10px var(--green)); animation: crystalPulse 1.5s infinite; }
+    @keyframes crystalPulse { 50% { transform: scale(1.1) rotate(-4deg); } }
+    .zone-icon { font-size: 1.05rem; margin-right: 3px; }
+    .zone-name { display: block; font-size: .76rem; font-weight: 900; }
+    .energy-pips { display: flex; justify-content: center; gap: 4px; margin-top: 8px; }
+    .pip { width: 18px; height: 5px; border-radius: 5px; background: rgba(255,255,255,.13); }
+    .pip.on { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .energy-extra { margin-top: 4px; color: var(--muted); font-size: .62rem; height: 10px; }
+
+    .question-card { position: relative; overflow: hidden; padding: clamp(22px,4vw,38px); min-height: 410px; }
+    .question-card::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 95% 0%, color-mix(in srgb,var(--zone-color) 25%,transparent), transparent 40%); }
+    .question-head { position: relative; display: flex; justify-content: space-between; gap: 13px; align-items: center; margin-bottom: 17px; }
+    .zone-chip { padding: 7px 11px; border-radius: 999px; font-size: .76rem; font-weight: 900; background: color-mix(in srgb,var(--zone-color) 28%,transparent); border: 1px solid color-mix(in srgb,var(--zone-color) 55%,transparent); }
+    .question-count { color: var(--muted); font-size: .8rem; }
+    .boss-badge { color: #251739; background: linear-gradient(90deg,#ffca55,#ff7c85); padding: 7px 11px; border-radius: 999px; font-size: .75rem; font-weight: 950; animation: bossGlow 1.5s infinite alternate; }
+    @keyframes bossGlow { to { box-shadow: 0 0 25px rgba(255,157,90,.55); } }
+    .question-text { position: relative; margin: 0 0 24px; max-width: 950px; font-family: Georgia, serif; font-size: clamp(1.45rem,3vw,2.2rem); line-height: 1.2; }
+    .answers { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+    .answer {
+      display: flex; align-items: center; gap: 12px; min-height: 66px; text-align: left; cursor: pointer;
+      color: white; background: rgba(255,255,255,.055); border: 1px solid rgba(255,255,255,.13); border-radius: 15px; padding: 13px 15px;
+      transition: transform .16s ease, background .16s ease, border-color .16s ease;
+    }
+    .answer:hover:not(:disabled) { transform: translateY(-2px); background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.3); }
+    .letter { display: grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 10px; background: rgba(255,255,255,.09); font-weight: 950; }
+    .answer.correct { background: rgba(116,240,167,.19); border-color: var(--green); box-shadow: 0 0 21px rgba(116,240,167,.2); }
+    .answer.wrong { background: rgba(255,107,136,.18); border-color: var(--red); animation: shake .42s ease; }
+    @keyframes shake { 25% { transform: translateX(-7px); } 50% { transform: translateX(6px); } 75% { transform: translateX(-3px); } }
+    .buff-row { position: relative; min-height: 26px; margin-top: 15px; display: flex; flex-wrap: wrap; gap: 7px; }
+    .buff-chip { color: #fff3c1; background: rgba(255,201,84,.11); border: 1px solid rgba(255,201,84,.23); border-radius: 999px; padding: 5px 9px; font-size: .7rem; font-weight: 800; }
+    .frozen-note { color: #a8f4ff; background: rgba(85,237,255,.1); border-color: rgba(85,237,255,.25); }
+
+    .side-column { display: grid; grid-template-rows: auto minmax(160px,1fr); gap: 13px; min-width: 0; }
+    .score-card, .log-card { padding: 17px; }
+    .panel-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .panel-heading h3 { margin: 0; font-family: Georgia, serif; }
+    .repair-meter { color: var(--green); font-size: .72rem; font-weight: 900; }
+    .players { display: grid; gap: 8px; }
+    .player-card { padding: 10px; display: grid; grid-template-columns: 39px 1fr auto; gap: 9px; align-items: center; border-radius: 13px; border: 1px solid transparent; background: rgba(255,255,255,.045); transition: .2s; }
+    .player-card.active { background: color-mix(in srgb,var(--player) 12%,transparent); border-color: color-mix(in srgb,var(--player) 48%,transparent); }
+    .player-avatar { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; background: var(--player); box-shadow: inset 0 0 15px rgba(255,255,255,.2); }
+    .player-name { font-size: .82rem; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 125px; }
+    .stats { margin-top: 3px; display: flex; gap: 7px; color: var(--muted); font-size: .63rem; }
+    .score { font-size: 1.18rem; font-weight: 1000; color: var(--gold); }
+    .relic-row { grid-column: 2 / 4; display: flex; flex-wrap: wrap; gap: 3px; min-height: 17px; }
+    .relic-mini { display: inline-flex; align-items: center; gap: 2px; padding: 2px 5px; border-radius: 8px; background: rgba(255,255,255,.075); font-size: .58rem; }
+    .empty-relics { color: rgba(255,255,255,.25); font-size: .58rem; }
+    .status-snow { color: #72e9ff; }
+    .log-card { min-height: 0; display: flex; flex-direction: column; }
+    .event-log { overflow: auto; max-height: 300px; display: flex; flex-direction: column; gap: 7px; padding-right: 3px; scrollbar-width: thin; }
+    .log-item { display: grid; grid-template-columns: 26px 1fr; gap: 7px; color: #d3cee8; font-size: .73rem; line-height: 1.35; padding: 7px; border-radius: 9px; background: rgba(255,255,255,.035); }
+    .log-item:first-child { border: 1px solid rgba(85,237,255,.17); }
+
+    /* MODALS */
+    .modal-layer { position: fixed; inset: 0; z-index: 20; display: none; place-items: center; padding: 18px; background: rgba(4,3,16,.78); backdrop-filter: blur(8px); }
+    .modal-layer.show { display: grid; animation: fade .25s ease; }
+    @keyframes fade { from { opacity: 0; } }
+    .modal { width: min(590px,100%); max-height: 92vh; overflow: auto; padding: 28px; text-align: center; border-radius: 26px; background: linear-gradient(150deg,#251b58,#100c2d 70%); border: 1px solid rgba(255,255,255,.17); box-shadow: 0 25px 90px rgba(0,0,0,.62); }
+    .result-icon { width: 80px; height: 80px; margin: 0 auto 14px; display: grid; place-items: center; border-radius: 50%; font-size: 2.6rem; }
+    .result-icon.good { color: #09351d; background: var(--green); box-shadow: 0 0 40px rgba(116,240,167,.4); }
+    .result-icon.bad { color: #3e0e1c; background: var(--red); box-shadow: 0 0 40px rgba(255,107,136,.35); }
+    .modal h2 { margin: 7px 0 9px; font-family: Georgia,serif; font-size: 2rem; }
+    .modal p { color: #c8c3df; line-height: 1.55; }
+    .points-flash { display: inline-block; margin: 4px 0 19px; padding: 8px 14px; border-radius: 999px; color: #241633; background: var(--gold); font-weight: 1000; }
+    .explanation { margin: 12px 0 20px; padding: 13px; border-radius: 13px; text-align: left; background: rgba(0,0,0,.18); border-left: 3px solid var(--cyan); }
+    .portal-stage { position: relative; min-height: 130px; display: grid; place-items: center; margin: -5px 0 4px; }
+    .portal-ring { position: absolute; width: 120px; height: 120px; border-radius: 50%; border: 8px solid #8a65ff; box-shadow: 0 0 20px #9b78ff, inset 0 0 20px #55edff; animation: portalSpin 1.6s linear infinite; }
+    .portal-ring::before { content: ""; position: absolute; inset: 10px; border-radius: 50%; border: 4px dashed var(--cyan); }
+    @keyframes portalSpin { to { transform: rotate(360deg); filter: hue-rotate(50deg); } }
+    .event-icon { z-index: 1; font-size: 3.4rem; animation: eventPop .55s .15s cubic-bezier(.2,1.5,.4,1) both; }
+    @keyframes eventPop { from { transform: scale(0) rotate(-20deg); opacity: 0; } }
+    .event-type { color: var(--cyan); text-transform: uppercase; letter-spacing: .15em; font-size: .67rem; font-weight: 950; }
+    .event-effect { margin: 12px 0; color: white !important; font-weight: 850; }
+    .target-area { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin: 17px 0; }
+    .target-btn, .bid-btn { min-width: 92px; color: white; border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.08); border-radius: 12px; padding: 10px; cursor: pointer; font-weight: 800; }
+    .target-btn:hover, .bid-btn:hover:not(:disabled) { background: rgba(85,237,255,.16); border-color: var(--cyan); }
+    .event-result { margin: 13px 0; padding: 11px; border-radius: 12px; color: #e8e4fb; background: rgba(116,240,167,.09); border: 1px solid rgba(116,240,167,.2); }
+    .auction-pass { margin: 15px 0; padding: 14px; border-radius: 13px; background: rgba(255,214,90,.08); border: 1px solid rgba(255,214,90,.18); }
+    .auction-pass strong { color: var(--gold); display: block; margin-top: 3px; font-size: 1.1rem; }
+
+    /* FINAL */
+    #finalScreen { padding: 40px 18px; overflow: hidden; }
+    .confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+    .confetti i { position: absolute; top: -20px; width: 9px; height: 18px; background: var(--c); left: var(--x); animation: fall var(--d) linear infinite; animation-delay: var(--delay); }
+    @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+    .final-wrap { width: min(860px,100%); margin: auto; position: relative; }
+    .winner-card { padding: 36px; text-align: center; }
+    .trophy { font-size: 5rem; filter: drop-shadow(0 0 27px rgba(255,214,90,.45)); animation: trophy 2s ease-in-out infinite; }
+    @keyframes trophy { 50% { transform: translateY(-8px) rotate(3deg); } }
+    .winner-card h1 { font-size: clamp(2.2rem,7vw,4.4rem); }
+    .winner-title { color: var(--gold); font-weight: 950; letter-spacing: .08em; text-transform: uppercase; }
+    .repair-summary { margin: 25px auto; max-width: 580px; }
+    .repair-label { display: flex; justify-content: space-between; margin-bottom: 8px; color: #d7d2ee; font-size: .84rem; font-weight: 850; }
+    .repair-track { height: 14px; padding: 3px; border-radius: 999px; background: rgba(255,255,255,.1); }
+    .repair-fill { height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg,var(--purple),var(--cyan),var(--green)); box-shadow: 0 0 20px rgba(85,237,255,.4); transition: width 1.2s ease; }
+    .ranking { margin: 25px 0; display: grid; gap: 8px; text-align: left; }
+    .rank-row { display: grid; grid-template-columns: 45px 42px 1fr auto; align-items: center; gap: 10px; padding: 12px 15px; border-radius: 14px; background: rgba(255,255,255,.055); border: 1px solid rgba(255,255,255,.09); animation: rankIn .45s var(--delay) both; }
+    @keyframes rankIn { from { opacity: 0; transform: translateX(-17px); } }
+    .rank-row:first-child { background: rgba(255,214,90,.1); border-color: rgba(255,214,90,.3); }
+    .rank-num { font-size: 1.2rem; font-weight: 1000; color: var(--muted); }
+    .rank-row:first-child .rank-num { color: var(--gold); }
+    .rank-avatar { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 11px; background: var(--player); }
+    .rank-name strong { display: block; }
+    .rank-name span { color: var(--muted); font-size: .7rem; }
+    .rank-score { color: var(--gold); font-size: 1.15rem; font-weight: 1000; }
+    .final-actions { display: flex; gap: 10px; justify-content: center; }
+    .final-actions .primary { width: auto; min-width: 200px; }
+
+    @media (max-width: 950px) {
+      .start-grid { grid-template-columns: 1fr; }
+      .game-layout { grid-template-columns: 1fr; }
+      .side-column { grid-template-columns: 1fr 1fr; grid-template-rows: auto; }
+      .event-log { max-height: 220px; }
+    }
+    @media (max-width: 700px) {
+      #gameScreen { padding: 9px; }
+      .timeline { overflow-x: auto; grid-template-columns: repeat(5, 145px); padding-bottom: 7px; }
+      .timeline::before { display: none; }
+      .answers { grid-template-columns: 1fr; }
+      .side-column { grid-template-columns: 1fr; }
+      .topbar { align-items: flex-start; }
+      .mini-brand span { display: none; }
+      .turn-pill { font-size: .72rem; padding: 8px 10px; }
+      .question-card { min-height: auto; }
+      .modal { padding: 22px 17px; }
+      .winner-card { padding: 26px 16px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section id="startScreen" class="screen active" aria-labelledby="gameTitle">
+      <div class="sky-words" aria-hidden="true">
+        <span class="sky-word">ᚹᛟᚱᛞ</span><span class="sky-word">PARLIAMENT</span>
+        <span class="sky-word">#viral</span><span class="sky-word">PHILOSOPHIA</span>
+      </div>
+      <div class="start-wrap">
+        <header class="brand">
+          <div class="brand-mark" aria-hidden="true">⏳</div>
+          <div class="eyebrow">A same-screen strategy adventure</div>
+          <h1 id="gameTitle">Word Heist: The <span class="broken">Broken English Timeline</span></h1>
+          <div class="subtitle">Repair the past. Steal the words. Rule the timeline.</div>
+        </header>
+        <div class="start-grid">
+          <section class="glass setup-card">
+            <h2 class="card-title">Assemble your Time Scholars</h2>
+            <p class="card-copy">Add 2–5 players. You’ll share this device and take turns crossing 1,500 years of English.</p>
+            <div id="nameList" class="name-list"></div>
+            <div class="setup-actions">
+              <button id="removePlayer" class="small-btn" type="button">− Remove</button>
+              <button id="addPlayer" class="small-btn" type="button">＋ Add scholar</button>
+            </div>
+            <button id="startGame" class="primary" type="button">Open the First Portal →</button>
+          </section>
+          <aside class="glass how-card">
+            <h2 class="card-title">How to survive history</h2>
+            <div class="how-steps">
+              <div class="how-step"><div class="step-icon">🧠</div><div><strong>Answer & repair</strong><span>Correct answers earn points and charge the active timeline crystal.</span></div></div>
+              <div class="how-step"><div class="step-icon">🌀</div><div><strong>Open a portal</strong><span>After every question, history strikes back with raids, boosts, trades, and traps.</span></div></div>
+              <div class="how-step"><div class="step-icon">🛡️</div><div><strong>Scheme wisely</strong><span>Shields block attacks. Relic sets and answer streaks unlock bonus points.</span></div></div>
+              <div class="how-step"><div class="step-icon">🏆</div><div><strong>Rule the timeline</strong><span>After 25 questions, the highest score becomes Master of the English Timeline.</span></div></div>
+            </div>
+          </aside>
+        </div>
+        <div class="story-strip">⚠ The five ages have collided. Viking words haunt smartphones, factory terms stalk castles, and somebody has put a hashtag in Beowulf.</div>
+      </div>
+    </section>
+
+    <section id="gameScreen" class="screen" aria-label="Main game">
+      <header class="topbar">
+        <div class="mini-brand"><div class="mini-logo">⏳</div><div><strong>Word Heist</strong><span>The Broken English Timeline</span></div></div>
+        <div class="turn-pill"><span class="turn-dot"></span><span id="turnLabel">Player's turn</span></div>
+      </header>
+      <div class="game-layout">
+        <div class="main-column">
+          <section class="glass timeline-card">
+            <div class="section-kicker">Timeline repair map · each crystal needs 3 energy</div>
+            <div id="timeline" class="timeline"></div>
+          </section>
+          <section id="questionCard" class="glass question-card">
+            <div class="question-head">
+              <div id="zoneChip" class="zone-chip">Old English</div>
+              <div id="questionCount" class="question-count">Question 1 / 25</div>
+              <div id="bossBadge" class="boss-badge" hidden>⚔ BOSS QUESTION · 20 PTS</div>
+            </div>
+            <h2 id="questionText" class="question-text"></h2>
+            <div id="answers" class="answers"></div>
+            <div id="buffRow" class="buff-row"></div>
+          </section>
+        </div>
+        <aside class="side-column">
+          <section class="glass score-card">
+            <div class="panel-heading"><h3>Time Scholars</h3><span id="repairMeter" class="repair-meter">0% repaired</span></div>
+            <div id="players" class="players"></div>
+          </section>
+          <section class="glass log-card">
+            <div class="panel-heading"><h3>Portal Log</h3><span>Newest first</span></div>
+            <div id="eventLog" class="event-log" aria-live="polite"></div>
+          </section>
+        </aside>
+      </div>
+    </section>
+
+    <section id="finalScreen" class="screen" aria-labelledby="finalHeading">
+      <div id="confetti" class="confetti" aria-hidden="true"></div>
+      <div class="final-wrap">
+        <section class="glass winner-card">
+          <div class="trophy">🏆</div>
+          <div class="eyebrow">The timeline has stabilised</div>
+          <h1 id="finalHeading"><span id="winnerName"></span> wins!</h1>
+          <div class="winner-title">Master of the English Timeline</div>
+          <div class="repair-summary">
+            <div class="repair-label"><span>Total timeline repair</span><strong id="finalRepair">0%</strong></div>
+            <div class="repair-track"><div id="repairFill" class="repair-fill"></div></div>
+          </div>
+          <div id="ranking" class="ranking"></div>
+          <div class="final-actions"><button id="playAgain" class="primary" type="button">Play Another Heist</button></div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <div id="resultLayer" class="modal-layer" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
+    <div class="modal">
+      <div id="resultIcon" class="result-icon">✓</div>
+      <h2 id="resultTitle">Timeline repaired!</h2>
+      <div id="pointsFlash" class="points-flash">+10 points</div>
+      <div id="explanation" class="explanation"></div>
+      <button id="openPortal" class="primary" type="button">Open the History Portal 🌀</button>
+    </div>
+  </div>
+
+  <div id="eventLayer" class="modal-layer" role="dialog" aria-modal="true" aria-labelledby="eventTitle">
+    <div class="modal">
+      <div class="portal-stage"><div class="portal-ring"></div><div id="eventIcon" class="event-icon">⚔️</div></div>
+      <div class="event-type">History Portal Event</div>
+      <h2 id="eventTitle">Viking Raid</h2>
+      <p id="eventDescription"></p>
+      <p id="eventEffect" class="event-effect"></p>
+      <div id="eventAction"></div>
+      <button id="continueGame" class="primary" type="button" hidden>Continue the Heist →</button>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const zones = [
+        { name: "Old English", icon: "⛵", color: "#3d8a57", relic: "Norse Rune", relicIcon: "ᚱ", flavour: "Vikings, runes & forests" },
+        { name: "Middle English", icon: "🏰", color: "#9d3e59", relic: "Norman Crown", relicIcon: "♛", flavour: "Castles, crowns & courts" },
+        { name: "Early Modern English", icon: "🪶", color: "#8a4fbd", relic: "Renaissance Quill", relicIcon: "🪶", flavour: "Books, ink & discovery" },
+        { name: "Late Modern English", icon: "🚂", color: "#3563ad", relic: "Industrial Gear", relicIcon: "⚙", flavour: "Factories, gears & steam" },
+        { name: "Present-Day English", icon: "📱", color: "#19b9c7", relic: "Digital Hashtag", relicIcon: "#", flavour: "Chats, memes & networks" }
+      ];
+
+      const questions = [
+        { z:0, q:"Which group supplied the core of everyday Old English words such as house, bread, and sleep?", a:["Germanic settlers","Norman lawyers","Renaissance scholars","Victorian engineers"], c:0, e:"Angles, Saxons, and Jutes spoke Germanic varieties that formed the core of Old English.", relic:true },
+        { z:0, q:"Which word entered English through Old Norse contact with Viking settlers?", a:["Justice","Sky","Telephone","Democracy"], c:1, e:"Sky comes from Old Norse ský. Norse contact added many short everyday words.", relic:true },
+        { z:0, q:"Why are the pronouns they, them, and their unusual in English history?", a:["They were invented online","They came from Old Norse","They were legal French","They came from railway slang"], c:1, e:"English borrowed they, them, and their from Norse, replacing older native forms.", relic:false },
+        { z:0, q:"Words such as monk and bishop spread in Old English mainly because of…", a:["Christianisation and Latin learning","The Norman Conquest","Industrial factories","American cinema"], c:0, e:"Christian missionaries and the Church brought religious vocabulary from Latin and Greek routes.", relic:true },
+        { z:0, boss:true, q:"BOSS: Which set contains only words strongly linked to Old Norse influence?", a:["sky, law, window","court, judge, prison","train, engine, factory","hashtag, selfie, app"], c:0, e:"Sky, law, and window are all associated with Norse contact in early medieval England.", relic:true },
+
+        { z:1, q:"Which event greatly increased French vocabulary in English after 1066?", a:["The Great Vowel Shift","The Norman Conquest","The Industrial Revolution","The invention of texting"], c:1, e:"The Norman Conquest installed a French-speaking ruling class in England.", relic:true },
+        { z:1, q:"Why does English use cow for the animal but beef for its meat?", a:["Farmers spoke English; elites used French at meals","Cows arrived from France","Beef is an Old Norse plural","Printers shortened the word"], c:0, e:"English-speaking workers tended the animals, while French-speaking elites used words such as boeuf for the food.", relic:true },
+        { z:1, q:"Which group of words reflects French influence on law and government?", a:["bread, sleep, mother","sky, egg, take","court, judge, justice","robot, laser, blog"], c:2, e:"Court, judge, and justice entered through French-speaking legal and administrative culture.", relic:false },
+        { z:1, q:"In medieval England, which language was most associated with the royal court and upper class?", a:["French","Old Norse","Welsh","Modern American English"], c:0, e:"For centuries after 1066, varieties of French carried prestige among rulers and aristocrats.", relic:true },
+        { z:1, boss:true, q:"BOSS: Which pairing best shows the animal/meat distinction created by English–French contact?", a:["sheep / mutton","book / library","king / crown","ship / harbour"], c:0, e:"Sheep is native English; mutton comes through French, reflecting different social roles.", relic:true },
+
+        { z:2, q:"During the Renaissance, English borrowed many learned words directly from…", a:["Latin and Greek","Only Old Norse","Australian slang","Computer code"], c:0, e:"Renaissance scholars drew heavily on classical Latin and Greek for education, science, and ideas.", relic:true },
+        { z:2, q:"What did the printing press help do to written English?", a:["Erase all loanwords","Spread texts and encourage standard spelling","Replace speech with Latin","End regional accents"], c:1, e:"Printing circulated texts widely and encouraged more consistent written conventions.", relic:true },
+        { z:2, q:"Which word is a learned borrowing with Greek roots?", a:["Democracy","House","They","Beef"], c:0, e:"Democracy comes from Greek elements meaning people and power or rule.", relic:false },
+        { z:2, q:"Overseas exploration and trade affected English by…", a:["Adding words from many languages","Removing all French words","Ending word creation","Returning English to runes"], c:0, e:"Travel and trade brought English into contact with languages and goods from around the world.", relic:true },
+        { z:2, boss:true, q:"BOSS: Which invention is most associated with William Caxton and the wider circulation of English books?", a:["The steam engine","The telephone","The printing press","The smartphone"], c:2, e:"William Caxton established a printing press in Westminster in 1476, accelerating English print culture.", relic:true },
+
+        { z:3, q:"Why did English gain many new technical terms in the Late Modern period?", a:["Industrialisation and scientific discovery","Viking settlement","The fall of Rome","Monks stopped writing"], c:0, e:"New machines, industries, and scientific fields needed names for unfamiliar processes and inventions.", relic:true },
+        { z:3, q:"Which set best belongs to the language of industrialisation?", a:["engine, piston, railway","monk, bishop, altar","court, jury, prison","emoji, app, livestream"], c:0, e:"Engines, pistons, and railways became prominent with industrial technology and transport.", relic:true },
+        { z:3, q:"The global spread of English in the 18th and 19th centuries led it to…", a:["Borrow words from languages worldwide","Stop changing completely","Lose all regional varieties","Use only Latin words"], c:0, e:"Trade, empire, migration, and contact carried English globally and brought many loanwords into it.", relic:false },
+        { z:3, q:"How were many new scientific words formed?", a:["From Greek and Latin roots","Only from emoji","By deleting vowels","Only from royal names"], c:0, e:"Scientists often combined classical roots to create precise international technical vocabulary.", relic:true },
+        { z:3, boss:true, q:"BOSS: Which invention most directly helped words and messages travel rapidly across long distances in the 1800s?", a:["The quill","The telegraph","The rune stone","The castle gate"], c:1, e:"The telegraph transformed long-distance communication and produced its own new vocabulary.", relic:true },
+
+        { z:4, q:"Which process created the word blog from web log?", a:["Blending and shortening","Latin declension","A Norman tax","The Great Vowel Shift"], c:0, e:"Blog compresses web log into a short new digital-era form.", relic:true },
+        { z:4, q:"What is a hashtag designed to do in online communication?", a:["Mark and group a topic","Translate Old English","Show a silent letter","Replace every verb"], c:0, e:"A hashtag labels a theme or topic so posts can be grouped and discovered.", relic:true },
+        { z:4, q:"Why can new slang spread internationally so quickly today?", a:["Social media and global networks","Castle law courts","Hand-copied manuscripts","Viking longships"], c:0, e:"Networked platforms let expressions travel across communities and borders almost instantly.", relic:false },
+        { z:4, q:"Which is an example of turning a brand or noun into a commonly used verb?", a:["to google","the sky","a bishop","the mutton"], c:0, e:"Speakers often create verbs from familiar nouns and names; to google is a digital-era example.", relic:true },
+        { z:4, boss:true, q:"FINAL BOSS: What best describes Present-Day English vocabulary?", a:["A fixed list that no longer changes","A mixture shaped by history, technology, and global contact","Only words inherited from Germanic","Mostly words invented by one person"], c:1, e:"Modern English is layered: inherited words, centuries of borrowing, and constant innovation all coexist.", relic:true }
+      ];
+
+      const eventDeck = [
+        { id:"viking", name:"Viking Raid", icon:"🛶", weight:11, desc:"Viking raiders brought Old Norse words and stole timeline energy.", effect:"Steal 5 points from a chosen scholar. A shield blocks the raid.", target:"points" },
+        { id:"norman", name:"Norman Tax", icon:"👑", weight:10, desc:"The Norman ruling class collects a language tax.", effect:"Every other scholar gives you 3 points. Their shields can block it." },
+        { id:"printing", name:"Printing Press", icon:"📰", weight:12, desc:"The printing press spreads knowledge faster.", effect:"Your next correct answer gives double base points." },
+        { id:"spark", name:"Renaissance Spark", icon:"🪶", weight:11, desc:"Classical learning gives your vocabulary a new spark.", effect:"Gain 6 points and a Renaissance Quill relic immediately." },
+        { id:"engine", name:"Industrial Engine", icon:"⚙️", weight:12, desc:"Industrial machines increase your word production.", effect:"Gain 8 points immediately." },
+        { id:"trade", name:"Colonial Trade Route", icon:"🧭", weight:5, desc:"Global trade changes the balance of vocabulary power.", effect:"Choose a scholar and swap scores. A shield blocks the swap.", target:"swap" },
+        { id:"viral", name:"Social Media Viral", icon:"📲", weight:11, desc:"Your knowledge goes viral across the timeline.", effect:"Your next correct answer gains an extra 8 points." },
+        { id:"freeze", name:"Time Freeze", icon:"❄️", weight:8, desc:"A broken timeline freezes one scholar.", effect:"Choose a scholar to freeze next turn. A shield blocks it.", target:"freeze" },
+        { id:"shield", name:"Dictionary Shield", icon:"🛡️", weight:12, desc:"A dictionary protects your vocabulary knowledge.", effect:"Gain 1 Dictionary Shield." },
+        { id:"smuggler", name:"Word Smuggler", icon:"🕵️", weight:7, desc:"A word smuggler moves vocabulary across periods.", effect:"Steal one random relic from a chosen scholar. A shield blocks it.", target:"relic" },
+        { id:"auction", name:"Time Auction", icon:"🔨", weight:5, desc:"Scholars bid for a lost word from the timeline market.", effect:"Everyone secretly bids 0, 3, 5, or 8. The sole highest bidder pays and gains 15 points.", auction:true },
+        { id:"broken", name:"Broken Dictionary", icon:"📕", weight:10, desc:"The dictionary is broken, but its cover still protects you.", effect:"Lose 5 points, then gain 1 shield." }
+      ];
+
+      const avatarIcons = ["🦉","🦊","🐉","🐙","🐝"];
+      const avatarColors = ["#7d5ce2","#e05d72","#2f9f80","#397fc3","#d59335"];
+      const relicIcons = Object.fromEntries(zones.map(z => [z.relic, z.relicIcon]));
+      let playerCount = 2;
+      let players = [];
+      let questionIndex = 0;
+      let zoneEnergy = [0,0,0,0,0];
+      let logs = [];
+      let answered = false;
+      let currentEvent = null;
+      let auctionState = null;
+
+      const $ = id => document.getElementById(id);
+      const screens = [$("startScreen"), $("gameScreen"), $("finalScreen")];
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>'"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[ch]);
+      }
+
+      function showScreen(screen) {
+        screens.forEach(s => s.classList.toggle("active", s === screen));
+        window.scrollTo({top:0, behavior:"smooth"});
+      }
+
+      function renderNameInputs() {
+        const old = [...document.querySelectorAll(".name-input")].map(i => i.value);
+        $("nameList").innerHTML = Array.from({length:playerCount}, (_,i) => `
+          <label class="name-row">
+            <span class="avatar-orb" style="--avatar:${avatarColors[i]}">${avatarIcons[i]}</span>
+            <input class="name-input" maxlength="18" value="${escapeHtml(old[i] || "")}" placeholder="Scholar ${i+1}" aria-label="Player ${i+1} name">
+          </label>`).join("");
+        $("removePlayer").disabled = playerCount <= 2;
+        $("addPlayer").disabled = playerCount >= 5;
+      }
+
+      function startGame() {
+        const inputs = [...document.querySelectorAll(".name-input")];
+        players = inputs.map((input,i) => ({
+          name: input.value.trim() || `Scholar ${i+1}`,
+          avatar: avatarIcons[i], color: avatarColors[i], points:0, energy:0,
+          shields:1, combo:0, frozen:false, doubleNext:false, viralNext:false, relics:[]
+        }));
+        questionIndex = 0; zoneEnergy = [0,0,0,0,0]; logs = []; answered = false;
+        addLog("⏳", `${players.map(p=>p.name).join(", ")} entered the fractured timeline.`);
+        showScreen($("gameScreen"));
+        renderTurn();
+      }
+
+      function currentPlayer() { return players[questionIndex % players.length]; }
+      function currentZone() { return questions[questionIndex].z; }
+      function totalEnergy() { return zoneEnergy.reduce((a,b)=>a+b,0); }
+      function repairPercent() { return Math.min(100, Math.round(totalEnergy() / 15 * 100)); }
+
+      function renderTimeline() {
+        const active = currentZone();
+        $("timeline").innerHTML = zones.map((z,i) => {
+          const energy = zoneEnergy[i];
+          return `<div class="zone ${i===active?"current":""} ${energy>=3?"repaired":""}" style="--zone:${z.color}">
+            <span class="crystal"></span>
+            <span class="zone-name"><span class="zone-icon">${z.icon}</span>${z.name}</span>
+            <div class="energy-pips">${[0,1,2].map(n=>`<span class="pip ${energy>n?"on":""}"></span>`).join("")}</div>
+            <div class="energy-extra">${energy>3?`+${energy-3} overflow energy`:z.flavour}</div>
+          </div>`;
+        }).join("");
+      }
+
+      function renderPlayers() {
+        const activeIndex = questionIndex % players.length;
+        $("players").innerHTML = players.map((p,i) => `
+          <div class="player-card ${i===activeIndex?"active":""}" style="--player:${p.color}">
+            <div class="player-avatar">${p.avatar}</div>
+            <div><div class="player-name">${escapeHtml(p.name)} ${p.frozen?'<span class="status-snow">❄</span>':""}</div>
+            <div class="stats"><span>⚡ ${p.energy}</span><span>🛡 ${p.shields}</span><span>🔥 ${p.combo}</span></div></div>
+            <div class="score">${p.points}</div>
+            <div class="relic-row">${p.relics.length ? p.relics.map(r=>`<span class="relic-mini" title="${r}">${relicIcons[r]||"◆"} ${r.replace(/ .*/,"")}</span>`).join("") : '<span class="empty-relics">No relics yet</span>'}</div>
+          </div>`).join("");
+        $("repairMeter").textContent = `${repairPercent()}% repaired`;
+      }
+
+      function renderLog() {
+        $("eventLog").innerHTML = logs.map(l => `<div class="log-item"><span>${l.icon}</span><span>${escapeHtml(l.text)}</span></div>`).join("");
+      }
+
+      function addLog(icon,text) {
+        logs.unshift({icon,text});
+        logs = logs.slice(0,18);
+        if ($("eventLog")) renderLog();
+      }
+
+      function renderTurn() {
+        answered = false;
+        const q = questions[questionIndex];
+        const p = currentPlayer();
+        const z = zones[q.z];
+        $("questionCard").style.setProperty("--zone-color", z.color);
+        $("zoneChip").textContent = `${z.icon} ${z.name}`;
+        $("questionCount").textContent = `Question ${questionIndex+1} / ${questions.length}`;
+        $("bossBadge").hidden = !q.boss;
+        $("questionText").textContent = q.q;
+        $("turnLabel").textContent = `${p.avatar} ${p.name}'s turn`;
+        $("answers").innerHTML = q.a.map((a,i)=>`<button class="answer" type="button" data-answer="${i}"><span class="letter">${String.fromCharCode(65+i)}</span><span>${escapeHtml(a)}</span></button>`).join("");
+        $("answers").querySelectorAll("button").forEach(btn => btn.addEventListener("click", () => answerQuestion(Number(btn.dataset.answer))));
+        const buffs = [];
+        if (p.frozen) buffs.push('<span class="buff-chip frozen-note">❄ Frozen: you can repair the timeline, but earn no points this turn</span>');
+        if (p.doubleNext) buffs.push('<span class="buff-chip">📰 Printing Press: next correct base score ×2</span>');
+        if (p.viralNext) buffs.push('<span class="buff-chip">📲 Viral: next correct answer +8</span>');
+        if (p.combo >= 2) buffs.push('<span class="buff-chip">🔥 One correct answer away from a combo bonus</span>');
+        $("buffRow").innerHTML = buffs.join("");
+        renderTimeline(); renderPlayers(); renderLog();
+      }
+
+      function awardRelic(player, relicName) {
+        player.relics.push(relicName);
+        let setBonus = false;
+        const unique = [...new Set(player.relics)];
+        if (unique.length >= 3) {
+          unique.slice(0,3).forEach(name => player.relics.splice(player.relics.indexOf(name),1));
+          player.points += 15;
+          setBonus = true;
+          addLog("💎", `${player.name} completed a three-era Relic Set for +15 points!`);
+        }
+        return setBonus;
+      }
+
+      function answerQuestion(choice) {
+        if (answered) return;
+        answered = true;
+        const q = questions[questionIndex];
+        const p = currentPlayer();
+        const correct = choice === q.c;
+        const wasFrozen = p.frozen;
+        let points = 0, notes = [];
+        document.querySelectorAll(".answer").forEach((btn,i) => {
+          btn.disabled = true;
+          if (i === q.c) btn.classList.add("correct");
+          if (i === choice && !correct) btn.classList.add("wrong");
+        });
+
+        if (correct) {
+          p.combo += 1;
+          p.energy += q.boss ? 2 : 1;
+          zoneEnergy[q.z] += q.boss ? 2 : 1;
+          let base = q.boss ? 20 : 10;
+          if (p.doubleNext) { base *= 2; notes.push("Printing Press doubled the base score"); p.doubleNext = false; }
+          if (p.viralNext) { base += 8; notes.push("viral bonus +8"); p.viralNext = false; }
+          if (p.combo % 3 === 0) { base += 10; notes.push("three-answer combo +10"); }
+          points = wasFrozen ? 0 : base;
+          if (wasFrozen) notes.push("Time Freeze blocked all points");
+          p.points += points;
+          if (q.relic) {
+            const relic = zones[q.z].relic;
+            const setBonus = awardRelic(p, relic);
+            notes.push(`found ${relicIcons[relic]} ${relic}` + (setBonus ? " and completed a Relic Set" : ""));
+          }
+          addLog(q.boss?"⚔️":"✅", `${p.name} answered correctly${points?` for +${points}`:" while frozen"}.`);
+        } else {
+          p.combo = 0;
+          addLog("❌", `${p.name} missed the question. The correct answer was “${q.a[q.c]}”.`);
+        }
+        if (wasFrozen) p.frozen = false;
+        showResult(correct, points, q, notes);
+        renderTimeline(); renderPlayers();
+      }
+
+      function showResult(correct, points, q, notes) {
+        const icon = $("resultIcon");
+        icon.textContent = correct ? "✓" : "✕";
+        icon.className = `result-icon ${correct?"good":"bad"}`;
+        $("resultTitle").textContent = correct ? (q.boss ? "Boss defeated!" : "Timeline repaired!") : "Timeline fracture!";
+        $("pointsFlash").textContent = correct ? (points ? `+${points} points` : "+0 points") : "Combo reset";
+        $("pointsFlash").style.background = correct ? "var(--gold)" : "var(--red)";
+        $("explanation").innerHTML = `<strong>${correct?"Correct!":"Correct answer: " + escapeHtml(q.a[q.c])}</strong><br>${escapeHtml(q.e)}${notes.length?`<br><br><strong>Turn effects:</strong> ${escapeHtml(notes.join(" · "))}`:""}`;
+        $("resultLayer").classList.add("show");
+        $("openPortal").focus();
+      }
+
+      function weightedEvent() {
+        const total = eventDeck.reduce((n,e)=>n+e.weight,0);
+        let roll = Math.random()*total;
+        for (const event of eventDeck) { roll -= event.weight; if (roll <= 0) return event; }
+        return eventDeck[0];
+      }
+
+      function openPortal() {
+        $("resultLayer").classList.remove("show");
+        currentEvent = weightedEvent();
+        $("eventIcon").textContent = currentEvent.icon;
+        $("eventTitle").textContent = currentEvent.name;
+        $("eventDescription").textContent = currentEvent.desc;
+        $("eventEffect").textContent = currentEvent.effect;
+        $("eventAction").innerHTML = "";
+        $("continueGame").hidden = true;
+        $("eventLayer").classList.add("show");
+        prepareEvent(currentEvent);
+      }
+
+      function eventResult(message) {
+        $("eventAction").innerHTML = `<div class="event-result">${escapeHtml(message)}</div>`;
+        $("continueGame").hidden = false;
+        $("continueGame").focus();
+        addLog(currentEvent.icon, message);
+        renderPlayers();
+      }
+
+      function targetButtons(event) {
+        const current = questionIndex % players.length;
+        const candidates = players.map((p,i)=>({p,i})).filter(x => x.i !== current);
+        let html = '<div class="target-area">';
+        candidates.forEach(({p,i}) => html += `<button type="button" class="target-btn" data-target="${i}">${p.avatar} ${escapeHtml(p.name)}<br><small>${p.points} pts · 🛡 ${p.shields}</small></button>`);
+        html += "</div>";
+        $("eventAction").innerHTML = html;
+        $("eventAction").querySelectorAll(".target-btn").forEach(btn => btn.addEventListener("click",()=>resolveTarget(event, Number(btn.dataset.target))));
+      }
+
+      function useShield(target, action) {
+        if (target.shields > 0) {
+          target.shields -= 1;
+          eventResult(`${target.name}'s Dictionary Shield blocked ${action} and shattered!`);
+          return true;
+        }
+        return false;
+      }
+
+      function resolveTarget(event, targetIndex) {
+        const actor = currentPlayer();
+        const target = players[targetIndex];
+        if (useShield(target, `the ${event.name}`)) return;
+        if (event.id === "viking") {
+          const amount = Math.min(5,target.points); target.points -= amount; actor.points += amount;
+          eventResult(`${actor.name} raided ${target.name} and stole ${amount} points.`);
+        } else if (event.id === "trade") {
+          const old = actor.points; actor.points = target.points; target.points = old;
+          eventResult(`${actor.name} and ${target.name} swapped scores across the trade route!`);
+        } else if (event.id === "freeze") {
+          target.frozen = true;
+          eventResult(`${target.name} is frozen and cannot gain points on their next turn.`);
+        } else if (event.id === "smuggler") {
+          if (!target.relics.length) {
+            eventResult(`${target.name} had no relics to smuggle. The dealer vanished empty-handed.`);
+          } else {
+            const ri = Math.floor(Math.random()*target.relics.length);
+            const relic = target.relics.splice(ri,1)[0];
+            const setBonus = awardRelic(actor,relic);
+            eventResult(`${actor.name} smuggled ${relicIcons[relic]} ${relic} from ${target.name}.${setBonus?" A Relic Set added +15 points!":""}`);
+          }
+        }
+      }
+
+      function prepareEvent(event) {
+        const p = currentPlayer();
+        if (event.target) { targetButtons(event); return; }
+        if (event.auction) { beginAuction(); return; }
+        if (event.id === "norman") {
+          let total = 0, blocked = [];
+          players.forEach(other => {
+            if (other === p) return;
+            if (other.shields > 0) { other.shields -= 1; blocked.push(other.name); }
+            else { const paid = Math.min(3,other.points); other.points -= paid; total += paid; }
+          });
+          p.points += total;
+          eventResult(`${p.name} collected ${total} points in Norman taxes.${blocked.length?` Shields protected ${blocked.join(", ")}.`:""}`);
+        } else if (event.id === "printing") {
+          p.doubleNext = true; eventResult(`${p.name}'s next correct base score will be doubled.`);
+        } else if (event.id === "spark") {
+          p.points += 6; const bonus = awardRelic(p,"Renaissance Quill");
+          eventResult(`${p.name} gained 6 points and a Renaissance Quill.${bonus?" The Relic Set added another 15!":""}`);
+        } else if (event.id === "engine") {
+          p.points += 8; eventResult(`${p.name}'s Industrial Engine produced 8 points.`);
+        } else if (event.id === "viral") {
+          p.viralNext = true; eventResult(`${p.name}'s next correct answer will earn 8 extra points.`);
+        } else if (event.id === "shield") {
+          p.shields += 1; eventResult(`${p.name} gained a Dictionary Shield and now has ${p.shields}.`);
+        } else if (event.id === "broken") {
+          const lost = Math.min(5,p.points); p.points -= lost; p.shields += 1;
+          eventResult(`${p.name} lost ${lost} points but salvaged the cover as a shield.`);
+        }
+      }
+
+      function beginAuction() {
+        auctionState = { index:0, bids:[] };
+        renderAuctionBidder();
+      }
+
+      function renderAuctionBidder() {
+        const p = players[auctionState.index];
+        $("eventAction").innerHTML = `<div class="auction-pass">Pass the device to<strong>${p.avatar} ${escapeHtml(p.name)}</strong><small>Your bid will be hidden immediately.</small></div>
+          <div class="target-area">${[0,3,5,8].map(b=>`<button class="bid-btn" type="button" data-bid="${b}" ${b>p.points?"disabled":""}>Bid ${b}</button>`).join("")}</div>`;
+        $("eventAction").querySelectorAll(".bid-btn").forEach(btn=>btn.addEventListener("click",()=>recordBid(Number(btn.dataset.bid))));
+      }
+
+      function recordBid(bid) {
+        auctionState.bids.push(bid);
+        auctionState.index += 1;
+        if (auctionState.index < players.length) renderAuctionBidder();
+        else resolveAuction();
+      }
+
+      function resolveAuction() {
+        const top = Math.max(...auctionState.bids);
+        const winners = auctionState.bids.map((b,i)=>b===top?i:-1).filter(i=>i>=0);
+        if (top === 0 || winners.length !== 1) {
+          eventResult(top===0 ? "Every scholar passed. The lost word returns to the mist." : `The highest bid of ${top} was tied. Nobody pays or wins the bonus.`);
+        } else {
+          const winner = players[winners[0]];
+          winner.points -= top; winner.points += 15;
+          eventResult(`${winner.name} won the auction with ${top}, paid the bid, and claimed 15 points!`);
+        }
+      }
+
+      function advanceGame() {
+        $("eventLayer").classList.remove("show");
+        questionIndex += 1;
+        if (questionIndex >= questions.length) finishGame();
+        else renderTurn();
+      }
+
+      function finishGame() {
+        const ranked = [...players].sort((a,b)=>b.points-a.points || b.energy-a.energy || b.relics.length-a.relics.length);
+        const winner = ranked[0];
+        $("winnerName").textContent = winner.name;
+        const pct = repairPercent();
+        $("finalRepair").textContent = `${pct}%`;
+        $("ranking").innerHTML = ranked.map((p,i)=>`<div class="rank-row" style="--delay:${i*.1}s;--player:${p.color}">
+          <div class="rank-num">${i+1}</div><div class="rank-avatar">${p.avatar}</div>
+          <div class="rank-name"><strong>${escapeHtml(p.name)}</strong><span>${p.energy} energy · ${p.relics.length} relics · best tiebreak order</span></div>
+          <div class="rank-score">${p.points} pts</div></div>`).join("");
+        renderConfetti();
+        showScreen($("finalScreen"));
+        requestAnimationFrame(()=>setTimeout(()=>$("repairFill").style.width=`${pct}%`,100));
+      }
+
+      function renderConfetti() {
+        const colors = ["#ffd65a","#55edff","#ff6b88","#74f0a7","#a679ff"];
+        $("confetti").innerHTML = Array.from({length:40},(_,i)=>`<i style="--x:${(i*37)%100}%;--c:${colors[i%colors.length]};--d:${4+(i%5)}s;--delay:-${(i%9)}s"></i>`).join("");
+      }
+
+      function resetGame() {
+        playerCount = Math.min(5,Math.max(2,players.length || 2));
+        renderNameInputs();
+        [...document.querySelectorAll(".name-input")].forEach((input,i)=>input.value=players[i]?.name || "");
+        $("repairFill").style.width = "0";
+        showScreen($("startScreen"));
+      }
+
+      $("addPlayer").addEventListener("click",()=>{ if(playerCount<5){ playerCount++; renderNameInputs(); }});
+      $("removePlayer").addEventListener("click",()=>{ if(playerCount>2){ playerCount--; renderNameInputs(); }});
+      $("startGame").addEventListener("click",startGame);
+      $("openPortal").addEventListener("click",openPortal);
+      $("continueGame").addEventListener("click",advanceGame);
+      $("playAgain").addEventListener("click",resetGame);
+      renderNameInputs();
+    })();
+  </script>
+</body>
+</html>
