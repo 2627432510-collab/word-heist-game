@@ -716,11 +716,29 @@
         return url.toString();
       }
 
+      function removeLobbyConnection(playerId) {
+        onlineConnections = onlineConnections.filter(item => item.playerId !== playerId);
+      }
+
+      function pruneDisconnectedLobbyPlayers() {
+        if (playMode !== "host" || gameStarted) return;
+        const before = players.length;
+        players = players.filter((player, index) => index === 0 || player.connected !== false);
+        onlineConnections = onlineConnections.filter(item => players.some(player => player.id === item.playerId));
+        if (players.length !== before) {
+          players.forEach((player, index) => {
+            player.avatar = avatarIcons[index % avatarIcons.length];
+            player.color = avatarColors[index % avatarColors.length];
+          });
+        }
+      }
+
       function renderOnlineRoster() {
         if (!onlineActive()) {
           $("onlineRoster").innerHTML = "";
           return;
         }
+        pruneDisconnectedLobbyPlayers();
         $("onlineRoster").innerHTML = players.map((p,i)=>`<div class="online-roster-row"><span>${p.avatar} ${escapeHtml(p.name)}</span><small>${i===0?"host":p.connected?"joined":"offline"}</small></div>`).join("");
         if (playMode === "host") {
           $("startGame").disabled = players.length < 2 || gameStarted;
@@ -807,8 +825,14 @@
         conn.on("close", () => {
           const player = players.find(p => p.id === conn.playerId);
           if (player) {
-            player.connected = false;
-            setRoomStatus(`${player.name} disconnected. They can rejoin before the next game.`, true);
+            if (!gameStarted) {
+              players = players.filter(p => p.id !== conn.playerId);
+              removeLobbyConnection(conn.playerId);
+              setRoomStatus(`${player.name} left the lobby. The room now has ${players.length} player${players.length===1?"":"s"}.`, true);
+            } else {
+              player.connected = false;
+              setRoomStatus(`${player.name} disconnected during the game.`, true);
+            }
             renderOnlineRoster();
             broadcastLobby();
           }
@@ -819,10 +843,16 @@
       function handleHostData(conn, data) {
         if (!data || typeof data !== "object") return;
         if (data.type === "join") {
+          if (conn.playerId && players.some(p => p.id === conn.playerId)) {
+            conn.send({ type:"joined", playerId: conn.playerId, roomCode, players: players.map(cleanPlayer) });
+            broadcastLobby();
+            return;
+          }
           if (gameStarted) {
             conn.send({ type:"reject", message:"The game has already started. Ask the host to restart after this round." });
             return;
           }
+          pruneDisconnectedLobbyPlayers();
           if (players.length >= 5) {
             conn.send({ type:"reject", message:"This room is full." });
             return;
@@ -976,6 +1006,7 @@
           return;
         }
         if (playMode === "host") {
+          pruneDisconnectedLobbyPlayers();
           if (players.length < 2) {
             setRoomStatus("Ask at least one more player to join before starting.", true);
             return;
