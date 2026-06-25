@@ -542,6 +542,9 @@
       let roundResults = [];
       let currentEvent = null;
       let skillChoices = [];
+      let skillHands = [];
+      let skillSelections = [];
+      let skillPlayerIndex = 0;
       let skillPhaseActive = false;
       let skillDeadline = 0;
       let skillTimerId = null;
@@ -632,7 +635,7 @@
           updateSkillTimerDisplay(msLeft);
           if (msLeft <= 0) {
             clearSkillTimer();
-            if (playMode !== "guest") skipSkillPhase("Time ran out. No skill card was used.");
+            if (playMode !== "guest") resolveSkillPhase("Time ran out. Pending players skipped.");
           }
         };
         tick();
@@ -898,6 +901,12 @@
           const index = players.findIndex(p => p.id === data.playerId);
           const choice = data.timedOut || data.choice === null ? NO_ANSWER : Number(data.choice);
           if (index >= 0 && (choice === NO_ANSWER || Number.isInteger(choice))) recordOnlineChoice(index, choice);
+          return;
+        }
+        if (data.type === "skill") {
+          if (!gameStarted || !skillPhaseActive || data.questionIndex !== questionIndex) return;
+          const index = players.findIndex(p => p.id === data.playerId);
+          if (index >= 0) recordSkillSelection(index, data.selection);
         }
       }
 
@@ -957,6 +966,9 @@
           roundChoices: [...roundChoices],
           roundResults: roundResults.map(r => ({ playerIndex:r.playerIndex, choice:r.choice, correct:r.correct, points:r.points, notes:[...r.notes] })),
           skillChoices: skillChoices.map(event => event.id),
+          skillHands: skillHands.map(hand => [...hand]),
+          skillSelections: skillSelections.map(selection => selection ? {...selection} : null),
+          skillPlayerIndex,
           skillPhaseActive,
           skillRemainingMs: remainingSkillMs(),
           currentEventId: currentEvent?.id || null,
@@ -978,6 +990,9 @@
         roundChoices = state.roundChoices || Array(players.length).fill(null);
         roundResults = (state.roundResults || []).map(r => ({ ...r, player: players[r.playerIndex], notes: r.notes || [] }));
         skillChoices = (state.skillChoices || []).map(id => eventDeck.find(e => e.id === id)).filter(Boolean);
+        skillHands = (state.skillHands || []).map(hand => [...hand]);
+        skillSelections = (state.skillSelections || []).map(selection => selection ? {...selection} : null);
+        skillPlayerIndex = state.skillPlayerIndex || 0;
         skillPhaseActive = !!state.skillPhaseActive;
         skillDeadline = Date.now() + Math.max(0, state.skillRemainingMs || 0);
         currentEvent = eventDeck.find(e => e.id === state.currentEventId) || null;
@@ -997,20 +1012,15 @@
 
       function showRemoteEvent() {
         $("resultLayer").classList.remove("show");
-        if (skillPhaseActive && !portalResolved && !currentEvent) {
-          $("eventIcon").textContent = "🃏";
-          $("eventTitle").textContent = "Skill Card Phase";
-          $("eventDescription").textContent = "The host is choosing a skill card for the portal leader.";
-          $("eventEffect").textContent = "20 seconds to use a card, choose a target, or skip.";
-          $("eventAction").innerHTML = `${skillTimerHtml()}${readonlySkillCardsHtml()}<div class="event-result">Waiting for host choice…</div>`;
-          updateSkillTimerDisplay(remainingSkillMs());
+        if (skillPhaseActive && !portalResolved) {
+          renderSkillPhaseModal();
         } else {
           const event = currentEvent || { icon:"⏭️", name:"Skill Phase", desc:"The skill phase is being resolved.", effect:"Waiting for host." };
           $("eventIcon").textContent = event.icon;
           $("eventTitle").textContent = event.name;
-          $("eventDescription").textContent = `${event.desc} Host is resolving this skill.`;
+          $("eventDescription").textContent = `${event.desc} Skill choices are being resolved.`;
           $("eventEffect").textContent = event.effect;
-          $("eventAction").innerHTML = `<div class="event-result">${portalResolved ? "Skill phase resolved. Waiting for host to continue." : "Waiting for host action…"}</div>`;
+          $("eventAction").innerHTML = `<div class="event-result">${portalResolved ? "Skill phase resolved. Waiting for next question." : "Waiting for skill choices…"}</div>`;
         }
         $("continueGame").hidden = true;
         $("eventLayer").classList.add("show");
@@ -1124,6 +1134,9 @@
         clearSkillTimer();
         skillPhaseActive = false;
         skillChoices = [];
+        skillHands = [];
+        skillSelections = [];
+        skillPlayerIndex = 0;
         currentEvent = null;
         portalResolved = false;
         answered = false;
@@ -1148,7 +1161,7 @@
           $("resultLayer").classList.remove("show");
           renderAnswerPrompt();
         }
-        if (modal === "event" && currentEvent) showRemoteEvent();
+        if (modal === "event" && (skillPhaseActive || currentEvent || portalResolved)) showRemoteEvent();
         else $("eventLayer").classList.remove("show");
         renderPlayers();
         renderLog();
@@ -1183,9 +1196,9 @@
         if (p.viralNext) buffs.push('<span class="buff-chip">📲 Viral: next correct answer +8</span>');
         if (p.combo >= 2) buffs.push('<span class="buff-chip">🔥 One correct answer away from a combo bonus</span>');
         buffs.push(onlineActive()
-          ? '<span class="buff-chip">📱 Online room: everyone answers on their own phone; host controls skill cards</span>'
-          : `<span class="buff-chip">🃏 Skill leader after this question: ${escapeHtml(currentPlayer().name)}</span>`);
-        buffs.push('<span class="buff-chip">✨ After the result: 20 seconds to use or skip a skill card</span>');
+          ? '<span class="buff-chip">📱 Online room: every player chooses their own skill card on their phone</span>'
+          : '<span class="buff-chip">🃏 Same device: pass the device so each player can choose one skill card</span>');
+        buffs.push('<span class="buff-chip">✨ After the result: 20 seconds for everyone to use or skip a skill card</span>');
         $("buffRow").innerHTML = `<div class="round-progress"><span>All players answer before reveal</span><span>${answeredCount}/${players.length} locked</span></div><div class="answer-status-grid">${statuses}</div>${buffs.join("")}`;
         renderPlayers();
       }
@@ -1399,54 +1412,136 @@
       }
 
       function readonlySkillCardsHtml() {
-        return `<div class="skill-grid">${skillChoices.map(event => skillCardHtml(event, true)).join("")}</div>`;
+        const index = onlineActive() ? localPlayerIndex() : skillPlayerIndex;
+        const cards = cardsForPlayer(index >= 0 ? index : 0);
+        return `<div class="skill-grid">${cards.map(event => skillCardHtml(event, true)).join("")}</div>`;
+      }
+
+      function cardsForPlayer(playerIndex) {
+        return (skillHands[playerIndex] || []).map(id => eventDeck.find(event => event.id === id)).filter(Boolean);
+      }
+
+      function nextPendingSkillIndex() {
+        return skillSelections.findIndex(selection => !selection);
+      }
+
+      function allSkillsSubmitted() {
+        return players.length > 0 && skillSelections.slice(0, players.length).every(Boolean);
+      }
+
+      function activeSkillIndex() {
+        if (onlineActive()) return localPlayerIndex();
+        const pending = nextPendingSkillIndex();
+        return pending >= 0 ? pending : 0;
+      }
+
+      function skillSelectionLabel(selection) {
+        if (!selection) return "choosing";
+        if (selection.skip) return selection.timedOut ? "timed out / skipped" : "skipped";
+        const event = eventDeck.find(card => card.id === selection.eventId);
+        if (!event) return "selected";
+        if (event.target) {
+          const target = players[selection.targetIndex];
+          return `${event.name}${target ? ` → ${target.name}` : ""}`;
+        }
+        return event.name;
+      }
+
+      function skillStatusHtml() {
+        const rows = players.map((player, index) => {
+          const selection = skillSelections[index];
+          const active = skillPhaseActive && !portalResolved && !selection && index === activeSkillIndex();
+          return `<div class="answer-status ${selection?"done":""} ${active?"active":""}">
+            <span>${player.avatar}</span><span>${escapeHtml(player.name)} · ${escapeHtml(skillSelectionLabel(selection))}</span>
+          </div>`;
+        }).join("");
+        return `<div class="round-progress"><span>Skill card choices</span><span>${skillSelections.filter(Boolean).length}/${players.length} submitted</span></div><div class="answer-status-grid">${rows}</div>`;
+      }
+
+      function normalizeSkillSelection(playerIndex, selection) {
+        if (playerIndex < 0 || playerIndex >= players.length) return null;
+        if (!selection || selection.skip) return { skip:true, timedOut: !!selection?.timedOut };
+        const cards = cardsForPlayer(playerIndex);
+        const event = cards.find(card => card.id === selection.eventId);
+        if (!event) return null;
+        const clean = { eventId:event.id, targetIndex:null };
+        if (event.target) {
+          const targetIndex = Number(selection.targetIndex);
+          if (!Number.isInteger(targetIndex) || targetIndex < 0 || targetIndex >= players.length || targetIndex === playerIndex) return null;
+          clean.targetIndex = targetIndex;
+        }
+        return clean;
       }
 
       function openPortal() {
         if (playMode === "guest") return;
         $("resultLayer").classList.remove("show");
-        skillChoices = drawSkillCards(3);
+        skillHands = players.map(() => drawSkillCards(3).map(event => event.id));
+        skillSelections = Array(players.length).fill(null);
+        skillPlayerIndex = 0;
+        skillChoices = cardsForPlayer(0);
         currentEvent = null;
         portalResolved = false;
         skillPhaseActive = true;
-        const leader = currentPlayer();
-        $("eventIcon").textContent = "🃏";
-        $("eventTitle").textContent = "Choose a Skill Card";
-        $("eventDescription").textContent = `Portal leader: ${leader.avatar} ${leader.name}. Choose one skill card, choose a target if needed, or skip.`;
-        $("eventEffect").textContent = "You have 20 seconds for this skill phase.";
         $("continueGame").hidden = true;
         $("eventLayer").classList.add("show");
-        renderSkillChoices();
+        renderSkillPhaseModal();
         startSkillTimer();
         if (playMode === "host") broadcastGameState("event");
       }
 
       function renderSkillChoices() {
-        $("eventAction").innerHTML = `${skillTimerHtml()}
-          <div class="skill-grid">${skillChoices.map(event => skillCardHtml(event)).join("")}</div>
-          <div class="target-area"><button id="skipSkill" class="target-btn" type="button">Skip skill</button></div>`;
-        $("eventAction").querySelectorAll(".skill-card").forEach(btn => btn.addEventListener("click", () => selectSkillCard(btn.dataset.skill)));
-        $("skipSkill").addEventListener("click", () => skipSkillPhase(`${currentPlayer().name} skipped the skill card phase.`));
+        renderSkillPhaseModal();
+      }
+
+      function renderSkillPhaseModal() {
+        const index = activeSkillIndex();
+        const chooser = players[index];
+        const canChoose = skillPhaseActive && !portalResolved && chooser && !skillSelections[index];
+        $("eventIcon").textContent = canChoose ? "🃏" : "⏳";
+        $("eventTitle").textContent = canChoose ? `${chooser.avatar} ${chooser.name}: Choose a Skill Card` : "Skill Card Phase";
+        $("eventDescription").textContent = onlineActive()
+          ? "Everyone chooses their own skill card on their own phone. The host only collects the choices."
+          : "Pass this device to each player. Every player can choose one skill card or skip.";
+        $("eventEffect").textContent = "20 seconds total. When time runs out, anyone who has not chosen will automatically skip.";
+        $("continueGame").hidden = true;
+        $("continueGame").disabled = true;
+        let html = `${skillTimerHtml()}`;
+        if (canChoose) {
+          const cards = cardsForPlayer(index);
+          html += `<div class="skill-grid">${cards.map(event => skillCardHtml(event)).join("")}</div>
+            <div class="target-area"><button id="skipSkill" class="target-btn" type="button">Skip my skill</button></div>`;
+        } else {
+          html += `<div class="event-result">Waiting for the remaining players to choose or for the 20-second timer to finish.</div>`;
+        }
+        html += skillStatusHtml();
+        $("eventAction").innerHTML = html;
+        $("eventAction").querySelectorAll(".skill-card").forEach(btn => btn.addEventListener("click", () => selectSkillCard(btn.dataset.skill, index)));
+        const skip = $("skipSkill");
+        if (skip) skip.addEventListener("click", () => submitSkillSelection(index, { skip:true }));
         updateSkillTimerDisplay(remainingSkillMs() || SKILL_TIME_LIMIT * 1000);
       }
 
-      function selectSkillCard(skillId) {
-        if (!skillPhaseActive || portalResolved || playMode === "guest") return;
-        const event = skillChoices.find(card => card.id === skillId);
+      function selectSkillCard(skillId, playerIndex = activeSkillIndex()) {
+        if (!skillPhaseActive || portalResolved || playerIndex < 0 || skillSelections[playerIndex]) return;
+        const event = cardsForPlayer(playerIndex).find(card => card.id === skillId);
         if (!event) return;
         currentEvent = event;
-        const leader = currentPlayer();
         $("eventIcon").textContent = event.icon;
         $("eventTitle").textContent = event.name;
-        $("eventDescription").textContent = `${leader.avatar} ${leader.name} selected this skill card.`;
+        $("eventDescription").textContent = `${players[playerIndex].avatar} ${players[playerIndex].name} selected this skill card.`;
         $("eventEffect").textContent = event.effect;
-        if (event.target) targetButtons(event);
-        else prepareEvent(event);
-        if (playMode === "host") broadcastGameState("event");
+        if (event.target) targetButtons(event, playerIndex);
+        else submitSkillSelection(playerIndex, { eventId:event.id, targetIndex:null });
       }
 
       function skipSkillPhase(message = "No skill card was used.") {
-        if (portalResolved || playMode === "guest") return;
+        if (portalResolved) return;
+        const index = activeSkillIndex();
+        if (skillPhaseActive && index >= 0 && !skillSelections[index]) {
+          submitSkillSelection(index, { skip:true });
+          return;
+        }
         eventResult(message, "⏭️");
       }
 
@@ -1463,86 +1558,176 @@
         if (playMode === "host") broadcastGameState("event");
       }
 
-      function targetButtons(event) {
-        const current = questionIndex % players.length;
-        const candidates = players.map((p,i)=>({p,i})).filter(x => x.i !== current);
+      function submitSkillSelection(playerIndex, selection) {
+        if (!skillPhaseActive || portalResolved || playerIndex < 0 || playerIndex >= players.length || skillSelections[playerIndex]) return;
+        const clean = normalizeSkillSelection(playerIndex, selection);
+        if (!clean) return;
+        if (playMode === "guest") {
+          skillSelections[playerIndex] = clean;
+          currentEvent = null;
+          renderSkillPhaseModal();
+          sendToHost({ type:"skill", playerId: myPlayerId, questionIndex, selection:clean });
+          return;
+        }
+        recordSkillSelection(playerIndex, clean);
+      }
+
+      function recordSkillSelection(playerIndex, selection) {
+        if (!skillPhaseActive || portalResolved || playerIndex < 0 || playerIndex >= players.length || skillSelections[playerIndex]) return;
+        const clean = normalizeSkillSelection(playerIndex, selection);
+        if (!clean) return;
+        skillSelections[playerIndex] = clean;
+        currentEvent = null;
+        skillPlayerIndex = nextPendingSkillIndex();
+        renderSkillPhaseModal();
+        if (playMode === "host") broadcastGameState("event");
+        if (allSkillsSubmitted()) resolveSkillPhase();
+      }
+
+      function targetButtons(event, actorIndex = activeSkillIndex()) {
+        const candidates = players.map((p,i)=>({p,i})).filter(x => x.i !== actorIndex);
         let html = `${skillTimerHtml()}<div class="target-area">`;
         candidates.forEach(({p,i}) => html += `<button type="button" class="target-btn" data-target="${i}">${p.avatar} ${escapeHtml(p.name)}<br><small>${p.points} pts · 🛡 ${p.shields}</small></button>`);
-        html += '<button id="skipSkill" class="target-btn" type="button">Skip skill</button></div>';
+        html += '<button id="skipSkill" class="target-btn" type="button">Skip this card</button></div>';
+        html += skillStatusHtml();
         $("eventAction").innerHTML = html;
-        $("eventAction").querySelectorAll("[data-target]").forEach(btn => btn.addEventListener("click",()=>resolveTarget(event, Number(btn.dataset.target))));
+        $("eventAction").querySelectorAll("[data-target]").forEach(btn => btn.addEventListener("click",()=>submitSkillSelection(actorIndex, { eventId:event.id, targetIndex:Number(btn.dataset.target) })));
         $("skipSkill").addEventListener("click", event => {
           event.stopPropagation();
-          skipSkillPhase(`${currentPlayer().name} decided not to use ${currentEvent?.name || "the selected card"}.`);
+          submitSkillSelection(actorIndex, { skip:true });
         });
         updateSkillTimerDisplay(remainingSkillMs() || SKILL_TIME_LIMIT * 1000);
       }
 
-      function useShield(target, action) {
+      function useShieldValue(target, action) {
         if (target.shields > 0) {
           target.shields -= 1;
-          eventResult(`${target.name}'s Dictionary Shield blocked ${action} and shattered!`);
-          return true;
+          return { blocked:true, message:`${target.name}'s Dictionary Shield blocked ${action} and shattered!` };
         }
-        return false;
+        return { blocked:false, message:"" };
+      }
+
+      function useShield(target, action) {
+        const result = useShieldValue(target, action);
+        if (result.blocked) eventResult(result.message, "🛡️");
+        return result.blocked;
+      }
+
+      function applyTargetSkill(event, actorIndex, targetIndex) {
+        const actor = players[actorIndex];
+        const target = players[targetIndex];
+        if (!actor || !target || actorIndex === targetIndex) return { icon:event.icon, message:"That target is not available." };
+        const shield = useShieldValue(target, `the ${event.name}`);
+        if (shield.blocked) return { icon:"🛡️", message:shield.message };
+        if (event.id === "viking") {
+          const amount = Math.min(5,target.points); target.points -= amount; actor.points += amount;
+          return { icon:event.icon, message:`${actor.name} raided ${target.name} and stole ${amount} points.` };
+        } else if (event.id === "trade") {
+          const old = actor.points; actor.points = target.points; target.points = old;
+          return { icon:event.icon, message:`${actor.name} and ${target.name} swapped scores across the trade route!` };
+        } else if (event.id === "freeze") {
+          target.frozen = true;
+          return { icon:event.icon, message:`${target.name} is frozen and cannot gain points on their next answer.` };
+        } else if (event.id === "smuggler") {
+          if (!target.relics.length) {
+            return { icon:event.icon, message:`${target.name} had no relics to smuggle. The dealer vanished empty-handed.` };
+          }
+          const ri = Math.floor(Math.random()*target.relics.length);
+          const relic = target.relics.splice(ri,1)[0];
+          const setBonus = awardRelic(actor,relic);
+          return { icon:event.icon, message:`${actor.name} smuggled ${relicIcons[relic]} ${relic} from ${target.name}.${setBonus?" A Relic Set added +15 points!":""}` };
+        }
+        return { icon:event.icon, message:`${actor.name} used ${event.name}.` };
       }
 
       function resolveTarget(event, targetIndex) {
         if (portalResolved) return;
-        const actor = currentPlayer();
-        const target = players[targetIndex];
-        if (!target) return;
-        if (useShield(target, `the ${event.name}`)) return;
-        if (event.id === "viking") {
-          const amount = Math.min(5,target.points); target.points -= amount; actor.points += amount;
-          eventResult(`${actor.name} raided ${target.name} and stole ${amount} points.`);
-        } else if (event.id === "trade") {
-          const old = actor.points; actor.points = target.points; target.points = old;
-          eventResult(`${actor.name} and ${target.name} swapped scores across the trade route!`);
-        } else if (event.id === "freeze") {
-          target.frozen = true;
-          eventResult(`${target.name} is frozen and cannot gain points on their next answer.`);
-        } else if (event.id === "smuggler") {
-          if (!target.relics.length) {
-            eventResult(`${target.name} had no relics to smuggle. The dealer vanished empty-handed.`);
-          } else {
-            const ri = Math.floor(Math.random()*target.relics.length);
-            const relic = target.relics.splice(ri,1)[0];
-            const setBonus = awardRelic(actor,relic);
-            eventResult(`${actor.name} smuggled ${relicIcons[relic]} ${relic} from ${target.name}.${setBonus?" A Relic Set added +15 points!":""}`);
-          }
-        }
+        const result = applyTargetSkill(event, activeSkillIndex(), targetIndex);
+        eventResult(result.message, result.icon);
       }
 
-      function prepareEvent(event) {
-        if (portalResolved) return;
-        const p = currentPlayer();
-        if (event.target) { targetButtons(event); return; }
-        if (event.auction) { beginAuction(); return; }
+      function applyInstantSkill(event, actorIndex) {
+        const p = players[actorIndex];
+        if (!p) return { icon:event.icon, message:"That player is not available." };
+        if (event.auction) return { icon:event.icon, message:"Time Auction is closed in this manual skill-card mode." };
         if (event.id === "norman") {
           let total = 0, blocked = [];
-          players.forEach(other => {
-            if (other === p) return;
+          players.forEach((other, otherIndex) => {
+            if (otherIndex === actorIndex) return;
             if (other.shields > 0) { other.shields -= 1; blocked.push(other.name); }
             else { const paid = Math.min(3,other.points); other.points -= paid; total += paid; }
           });
           p.points += total;
-          eventResult(`${p.name} collected ${total} points in Norman taxes.${blocked.length?` Shields protected ${blocked.join(", ")}.`:""}`);
+          return { icon:event.icon, message:`${p.name} collected ${total} points in Norman taxes.${blocked.length?` Shields protected ${blocked.join(", ")}.`:""}` };
         } else if (event.id === "printing") {
-          p.doubleNext = true; eventResult(`${p.name}'s next correct base score will be doubled.`);
+          p.doubleNext = true;
+          return { icon:event.icon, message:`${p.name}'s next correct base score will be doubled.` };
         } else if (event.id === "spark") {
           p.points += 6; const bonus = awardRelic(p,"Renaissance Quill");
-          eventResult(`${p.name} gained 6 points and a Renaissance Quill.${bonus?" The Relic Set added another 15!":""}`);
+          return { icon:event.icon, message:`${p.name} gained 6 points and a Renaissance Quill.${bonus?" The Relic Set added another 15!":""}` };
         } else if (event.id === "engine") {
-          p.points += 8; eventResult(`${p.name}'s Industrial Engine produced 8 points.`);
+          p.points += 8;
+          return { icon:event.icon, message:`${p.name}'s Industrial Engine produced 8 points.` };
         } else if (event.id === "viral") {
-          p.viralNext = true; eventResult(`${p.name}'s next correct answer will earn 8 extra points.`);
+          p.viralNext = true;
+          return { icon:event.icon, message:`${p.name}'s next correct answer will earn 8 extra points.` };
         } else if (event.id === "shield") {
-          p.shields += 1; eventResult(`${p.name} gained a Dictionary Shield and now has ${p.shields}.`);
+          p.shields += 1;
+          return { icon:event.icon, message:`${p.name} gained a Dictionary Shield and now has ${p.shields}.` };
         } else if (event.id === "broken") {
           const lost = Math.min(5,p.points); p.points -= lost; p.shields += 1;
-          eventResult(`${p.name} lost ${lost} points but salvaged the cover as a shield.`);
+          return { icon:event.icon, message:`${p.name} lost ${lost} points but salvaged the cover as a shield.` };
         }
+        return { icon:event.icon, message:`${p.name} used ${event.name}.` };
+      }
+
+      function applySkillSelection(playerIndex, selection) {
+        const event = eventDeck.find(card => card.id === selection.eventId);
+        if (!event) return { icon:"🃏", message:`${players[playerIndex]?.name || "A player"}'s skill card could not be found.` };
+        return event.target ? applyTargetSkill(event, playerIndex, selection.targetIndex) : applyInstantSkill(event, playerIndex);
+      }
+
+      function resolveSkillPhase(reason = "") {
+        if (!skillPhaseActive || portalResolved) return;
+        clearSkillTimer();
+        skillSelections = players.map((_, index) => skillSelections[index] || { skip:true, timedOut:true });
+        const summaries = [];
+        skillSelections.forEach((selection, index) => {
+          const player = players[index];
+          if (!player) return;
+          if (selection.skip) {
+            const message = selection.timedOut ? `${player.name} did not choose in time and skipped.` : `${player.name} skipped.`;
+            summaries.push(message);
+            addLog("⏭️", message);
+            return;
+          }
+          const result = applySkillSelection(index, selection);
+          summaries.push(result.message);
+          addLog(result.icon, result.message);
+        });
+        currentEvent = null;
+        skillChoices = [];
+        skillPhaseActive = false;
+        portalResolved = true;
+        $("eventIcon").textContent = "🃏";
+        $("eventTitle").textContent = "Skill Cards Resolved";
+        $("eventDescription").textContent = "Every player had the chance to use or skip a skill card.";
+        $("eventEffect").textContent = reason || "Skill phase complete.";
+        $("eventAction").innerHTML = `<div class="event-result">${reason ? `${escapeHtml(reason)}<br>` : ""}${summaries.map(text => `• ${escapeHtml(text)}`).join("<br>") || "No skill cards were used."}</div>`;
+        $("continueGame").hidden = false;
+        $("continueGame").textContent = playMode === "guest" ? "Waiting for host..." : "Next Question →";
+        $("continueGame").disabled = playMode === "guest";
+        renderPlayers();
+        if (playMode === "host") broadcastGameState("event");
+      }
+
+      function prepareEvent(event) {
+        if (portalResolved) return;
+        const actorIndex = activeSkillIndex();
+        if (event.target) { targetButtons(event, actorIndex); return; }
+        if (event.auction) { beginAuction(); return; }
+        const result = applyInstantSkill(event, actorIndex);
+        eventResult(result.message, result.icon);
       }
 
       function beginAuction() {
