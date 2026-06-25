@@ -94,6 +94,22 @@
     .setup-card, .how-card { padding: clamp(22px, 4vw, 34px); }
     .card-title { margin: 0 0 7px; font-family: Georgia, serif; font-size: 1.5rem; }
     .card-copy { margin: 0 0 20px; color: var(--muted); line-height: 1.55; }
+    .mode-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 14px; padding: 5px; border-radius: 15px; background: rgba(0,0,0,.18); border: 1px solid rgba(255,255,255,.08); }
+    .mode-tab { border: 0; border-radius: 11px; padding: 10px; color: var(--muted); background: transparent; cursor: pointer; font-weight: 900; }
+    .mode-tab.active { color: #20152e; background: var(--gold); box-shadow: 0 6px 20px rgba(255,214,90,.18); }
+    .online-lobby { display: grid; gap: 10px; margin-bottom: 16px; }
+    .online-field, .room-code-field { display: grid; gap: 5px; color: var(--muted); font-size: .72rem; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
+    .online-field input, .room-code-field input { width: 100%; padding: 12px 13px; color: white; border: 1px solid var(--line); border-radius: 12px; background: rgba(3,2,18,.52); text-transform: none; letter-spacing: 0; }
+    .room-code-field input { text-transform: uppercase; }
+    .room-actions { display: grid; grid-template-columns: auto minmax(95px,1fr) auto; gap: 8px; align-items: end; }
+    .room-status { color: #d9d4f1; font-size: .78rem; line-height: 1.4; padding: 10px 11px; border-radius: 12px; background: rgba(85,237,255,.08); border: 1px solid rgba(85,237,255,.18); }
+    .room-status.warn { color: #fff3c1; background: rgba(255,214,90,.09); border-color: rgba(255,214,90,.2); }
+    .room-share { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 11px; border-radius: 14px; background: rgba(116,240,167,.1); border: 1px solid rgba(116,240,167,.22); }
+    .room-share div { color: var(--muted); font-size: .72rem; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
+    .room-share strong { color: var(--green); font-size: 1.45rem; letter-spacing: .12em; }
+    .online-roster { display: grid; gap: 6px; }
+    .online-roster-row { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 11px; background: rgba(255,255,255,.055); color: #e8e4fb; font-size: .82rem; font-weight: 850; }
+    .online-roster-row small { color: var(--muted); }
     .name-list { display: grid; gap: 10px; }
     .name-row { display: grid; grid-template-columns: 46px 1fr; gap: 10px; align-items: center; }
     .avatar-orb { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; background: var(--avatar); font-size: 1.35rem; box-shadow: 0 0 22px color-mix(in srgb, var(--avatar) 45%, transparent); }
@@ -169,6 +185,16 @@
     .buff-row { position: relative; min-height: 26px; margin-top: 15px; display: flex; flex-wrap: wrap; gap: 7px; }
     .buff-chip { color: #fff3c1; background: rgba(255,201,84,.11); border: 1px solid rgba(255,201,84,.23); border-radius: 999px; padding: 5px 9px; font-size: .7rem; font-weight: 800; }
     .frozen-note { color: #a8f4ff; background: rgba(85,237,255,.1); border-color: rgba(85,237,255,.25); }
+    .round-progress { flex: 1 0 100%; display: flex; justify-content: space-between; gap: 10px; align-items: center; color: var(--muted); font-size: .72rem; font-weight: 850; }
+    .answer-status-grid { flex: 1 0 100%; display: grid; grid-template-columns: repeat(auto-fit,minmax(118px,1fr)); gap: 7px; margin: 1px 0 2px; }
+    .answer-status { display: flex; align-items: center; gap: 7px; min-height: 33px; padding: 6px 8px; border-radius: 12px; color: var(--muted); background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); font-size: .72rem; font-weight: 850; }
+    .answer-status.active { color: white; border-color: var(--cyan); background: rgba(85,237,255,.12); box-shadow: 0 0 16px rgba(85,237,255,.13); }
+    .answer-status.done { color: #c7ffd9; border-color: rgba(116,240,167,.42); background: rgba(116,240,167,.11); }
+    .round-results { display: grid; gap: 7px; margin-top: 13px; }
+    .round-result { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 8px 10px; border-radius: 12px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.11); }
+    .round-result.good { border-color: rgba(116,240,167,.38); background: rgba(116,240,167,.1); }
+    .round-result.bad { border-color: rgba(255,107,136,.34); background: rgba(255,107,136,.08); }
+    .round-result small { color: var(--muted); font-weight: 850; }
 
     .side-column { display: grid; grid-template-rows: auto minmax(160px,1fr); gap: 13px; min-width: 0; }
     .score-card, .log-card { padding: 17px; }
@@ -254,6 +280,8 @@
     }
     @media (max-width: 700px) {
       #gameScreen { padding: 9px; }
+      .room-actions { grid-template-columns: 1fr; }
+      .room-share { grid-template-columns: 1fr; text-align: center; }
       .timeline { overflow-x: auto; grid-template-columns: repeat(5, 145px); padding-bottom: 7px; }
       .timeline::before { display: none; }
       .answers { grid-template-columns: 1fr; }
@@ -280,14 +308,39 @@
       <div class="start-wrap">
         <header class="brand">
           <div class="brand-mark" aria-hidden="true">⏳</div>
-          <div class="eyebrow">A same-screen strategy adventure</div>
+          <div class="eyebrow">A classroom strategy adventure</div>
           <h1 id="gameTitle">Word Heist: The <span class="broken">Broken English Timeline</span></h1>
           <div class="subtitle">Repair the past. Steal the words. Rule the timeline.</div>
         </header>
         <div class="start-grid">
           <section class="glass setup-card">
             <h2 class="card-title">Assemble your Time Scholars</h2>
-            <p class="card-copy">Add 2–5 players. You’ll share this device and take turns crossing 1,500 years of English.</p>
+            <p class="card-copy">Add 2–5 players. Everyone answers each question, then the timeline scores the whole group together.</p>
+            <div class="mode-tabs" role="group" aria-label="Game mode">
+              <button id="sameDeviceMode" class="mode-tab active" type="button">Same device</button>
+              <button id="onlineRoomMode" class="mode-tab" type="button">Online room</button>
+            </div>
+            <div id="onlineLobby" class="online-lobby" hidden>
+              <label class="online-field">
+                <span>Your name</span>
+                <input id="onlineName" maxlength="18" placeholder="Your scholar name" autocomplete="nickname">
+              </label>
+              <div class="room-actions">
+                <button id="createRoom" class="small-btn" type="button">Create room</button>
+                <label class="room-code-field">
+                  <span>Room code</span>
+                  <input id="roomCodeInput" maxlength="8" placeholder="ABCD">
+                </label>
+                <button id="joinRoom" class="small-btn" type="button">Join room</button>
+              </div>
+              <div id="roomStatus" class="room-status">Create a room on the host device, then others enter the room code on their phones.</div>
+              <div id="roomShare" class="room-share" hidden>
+                <div>Room code</div>
+                <strong id="roomCodeDisplay">----</strong>
+                <button id="copyRoomLink" class="small-btn" type="button">Copy join link</button>
+              </div>
+              <div id="onlineRoster" class="online-roster"></div>
+            </div>
             <div id="nameList" class="name-list"></div>
             <div class="setup-actions">
               <button id="removePlayer" class="small-btn" type="button">− Remove</button>
@@ -298,9 +351,9 @@
           <aside class="glass how-card">
             <h2 class="card-title">How to survive history</h2>
             <div class="how-steps">
-              <div class="how-step"><div class="step-icon">🧠</div><div><strong>Answer & repair</strong><span>Correct answers earn points and charge the active timeline crystal.</span></div></div>
+              <div class="how-step"><div class="step-icon">🧠</div><div><strong>Answer together</strong><span>Each player locks in an answer before the correct answer is revealed.</span></div></div>
               <div class="how-step"><div class="step-icon">🌀</div><div><strong>Open a portal</strong><span>After every question, history strikes back with raids, boosts, trades, and traps.</span></div></div>
-              <div class="how-step"><div class="step-icon">🛡️</div><div><strong>Scheme wisely</strong><span>Shields block attacks. Relic sets and answer streaks unlock bonus points.</span></div></div>
+              <div class="how-step"><div class="step-icon">🛡️</div><div><strong>Score together</strong><span>Every correct answer earns points and charges the active timeline crystal.</span></div></div>
               <div class="how-step"><div class="step-icon">🏆</div><div><strong>Rule the timeline</strong><span>After 25 questions, the highest score becomes Master of the English Timeline.</span></div></div>
             </div>
           </aside>
@@ -312,7 +365,7 @@
     <section id="gameScreen" class="screen" aria-label="Main game">
       <header class="topbar">
         <div class="mini-brand"><div class="mini-logo">⏳</div><div><strong>Word Heist</strong><span>The Broken English Timeline</span></div></div>
-        <div class="turn-pill"><span class="turn-dot"></span><span id="turnLabel">Player's turn</span></div>
+        <div class="turn-pill"><span class="turn-dot"></span><span id="turnLabel">Player is answering</span></div>
       </header>
       <div class="game-layout">
         <div class="main-column">
@@ -385,6 +438,7 @@
     </div>
   </div>
 
+  <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
   <script>
     (() => {
       "use strict";
@@ -437,7 +491,7 @@
         { id:"engine", name:"Industrial Engine", icon:"⚙️", weight:12, desc:"Industrial machines increase your word production.", effect:"Gain 8 points immediately." },
         { id:"trade", name:"Colonial Trade Route", icon:"🧭", weight:5, desc:"Global trade changes the balance of vocabulary power.", effect:"Choose a scholar and swap scores. A shield blocks the swap.", target:"swap" },
         { id:"viral", name:"Social Media Viral", icon:"📲", weight:11, desc:"Your knowledge goes viral across the timeline.", effect:"Your next correct answer gains an extra 8 points." },
-        { id:"freeze", name:"Time Freeze", icon:"❄️", weight:8, desc:"A broken timeline freezes one scholar.", effect:"Choose a scholar to freeze next turn. A shield blocks it.", target:"freeze" },
+        { id:"freeze", name:"Time Freeze", icon:"❄️", weight:8, desc:"A broken timeline freezes one scholar.", effect:"Choose a scholar to freeze on their next answer. A shield blocks it.", target:"freeze" },
         { id:"shield", name:"Dictionary Shield", icon:"🛡️", weight:12, desc:"A dictionary protects your vocabulary knowledge.", effect:"Gain 1 Dictionary Shield." },
         { id:"smuggler", name:"Word Smuggler", icon:"🕵️", weight:7, desc:"A word smuggler moves vocabulary across periods.", effect:"Steal one random relic from a chosen scholar. A shield blocks it.", target:"relic" },
         { id:"auction", name:"Time Auction", icon:"🔨", weight:5, desc:"Scholars bid for a lost word from the timeline market.", effect:"Everyone secretly bids 0, 3, 5, or 8. The sole highest bidder pays and gains 15 points.", auction:true },
@@ -453,8 +507,21 @@
       let zoneEnergy = [0,0,0,0,0];
       let logs = [];
       let answered = false;
+      let answeringIndex = 0;
+      let roundChoices = [];
+      let roundResults = [];
       let currentEvent = null;
       let auctionState = null;
+      const onlinePrefix = "wordheist-room-";
+      let playMode = "local";
+      let peer = null;
+      let roomCode = "";
+      let onlineConnections = [];
+      let hostConnection = null;
+      let myPlayerId = null;
+      let playerIdSeq = 1;
+      let portalResolved = false;
+      let gameStarted = false;
 
       const $ = id => document.getElementById(id);
       const screens = [$("startScreen"), $("gameScreen"), $("finalScreen")];
@@ -468,6 +535,49 @@
         window.scrollTo({top:0, behavior:"smooth"});
       }
 
+      function createPlayer(name, index, id) {
+        return {
+          id: id || `local-${index}`,
+          name: name || `Scholar ${index+1}`,
+          avatar: avatarIcons[index % avatarIcons.length],
+          color: avatarColors[index % avatarColors.length],
+          points:0, energy:0, shields:1, combo:0,
+          frozen:false, doubleNext:false, viralNext:false, relics:[],
+          connected:true
+        };
+      }
+
+      function resetPlayerForGame(player, index) {
+        player.avatar = avatarIcons[index % avatarIcons.length];
+        player.color = avatarColors[index % avatarColors.length];
+        player.points = 0;
+        player.energy = 0;
+        player.shields = 1;
+        player.combo = 0;
+        player.frozen = false;
+        player.doubleNext = false;
+        player.viralNext = false;
+        player.relics = [];
+        player.connected = player.connected !== false;
+      }
+
+      function cleanPlayer(player) {
+        return {
+          id: player.id, name: player.name, avatar: player.avatar, color: player.color,
+          points: player.points, energy: player.energy, shields: player.shields,
+          combo: player.combo, frozen: player.frozen, doubleNext: player.doubleNext,
+          viralNext: player.viralNext, relics: [...player.relics], connected: player.connected !== false
+        };
+      }
+
+      function localPlayerIndex() {
+        return players.findIndex(p => p.id === myPlayerId);
+      }
+
+      function onlineActive() {
+        return playMode === "host" || playMode === "guest";
+      }
+
       function renderNameInputs() {
         const old = [...document.querySelectorAll(".name-input")].map(i => i.value);
         $("nameList").innerHTML = Array.from({length:playerCount}, (_,i) => `
@@ -479,20 +589,324 @@
         $("addPlayer").disabled = playerCount >= 5;
       }
 
+      function setRoomStatus(text, warn = false) {
+        $("roomStatus").textContent = text;
+        $("roomStatus").classList.toggle("warn", warn);
+      }
+
+      function setSetupMode(mode) {
+        if (mode === "local" && onlineActive()) closeOnlineRoom();
+        if (mode === "online" && playMode === "local") playMode = "guest";
+        const online = mode === "online";
+        $("sameDeviceMode").classList.toggle("active", !online);
+        $("onlineRoomMode").classList.toggle("active", online);
+        $("onlineLobby").hidden = !online;
+        $("nameList").hidden = online;
+        $("removePlayer").hidden = online;
+        $("addPlayer").hidden = online;
+        $("startGame").textContent = online ? "Start online game →" : "Open the First Portal →";
+        $("startGame").disabled = online && playMode !== "host";
+        if (!online) {
+          playMode = "local";
+          $("startGame").disabled = false;
+        }
+      }
+
+      function generateRoomCode() {
+        return Math.random().toString(36).slice(2,6).toUpperCase();
+      }
+
+      function roomPeerId(code) {
+        return `${onlinePrefix}${String(code).trim().toLowerCase()}`;
+      }
+
+      function ensurePeerLibrary() {
+        if (typeof Peer === "undefined") {
+          setRoomStatus("Online room library did not load. Open the public link with internet access and try again.", true);
+          return false;
+        }
+        return true;
+      }
+
+      function roomJoinUrl() {
+        const url = new URL(window.location.href);
+        url.searchParams.set("room", roomCode);
+        return url.toString();
+      }
+
+      function renderOnlineRoster() {
+        if (!onlineActive()) {
+          $("onlineRoster").innerHTML = "";
+          return;
+        }
+        $("onlineRoster").innerHTML = players.map((p,i)=>`<div class="online-roster-row"><span>${p.avatar} ${escapeHtml(p.name)}</span><small>${i===0?"host":p.connected?"joined":"offline"}</small></div>`).join("");
+        if (playMode === "host") {
+          $("startGame").disabled = players.length < 2 || gameStarted;
+          $("startGame").textContent = gameStarted ? "Game running" : `Start online game (${players.length}/5) →`;
+        }
+      }
+
+      function closeOnlineRoom() {
+        onlineConnections.forEach(item => {
+          try { item.conn.close(); } catch (_) {}
+        });
+        onlineConnections = [];
+        if (hostConnection) {
+          try { hostConnection.close(); } catch (_) {}
+        }
+        hostConnection = null;
+        if (peer) {
+          try { peer.destroy(); } catch (_) {}
+        }
+        peer = null;
+        roomCode = "";
+        myPlayerId = null;
+        playerIdSeq = 1;
+        gameStarted = false;
+        players = [];
+        $("roomShare").hidden = true;
+        $("onlineRoster").innerHTML = "";
+      }
+
+      function createOnlineRoom() {
+        if (!ensurePeerLibrary()) return;
+        closeOnlineRoom();
+        playMode = "host";
+        gameStarted = false;
+        roomCode = generateRoomCode();
+        myPlayerId = "host";
+        const hostName = $("onlineName").value.trim() || "Host Scholar";
+        players = [createPlayer(hostName, 0, myPlayerId)];
+        setSetupMode("online");
+        $("roomShare").hidden = false;
+        $("roomCodeDisplay").textContent = roomCode;
+        setRoomStatus("Creating room… keep this host page open during the game.");
+        peer = new Peer(roomPeerId(roomCode), { debug: 1 });
+        peer.on("open", () => {
+          setRoomStatus(`Room ${roomCode} is open. Share the code or join link with players.`);
+          renderOnlineRoster();
+        });
+        peer.on("connection", setupHostConnection);
+        peer.on("error", err => {
+          setRoomStatus(`Room error: ${err.type || err.message || "connection failed"}. Try creating another room.`, true);
+          $("startGame").disabled = true;
+        });
+      }
+
+      function joinOnlineRoom() {
+        if (!ensurePeerLibrary()) return;
+        closeOnlineRoom();
+        playMode = "guest";
+        gameStarted = false;
+        roomCode = $("roomCodeInput").value.trim().toUpperCase();
+        if (!roomCode) {
+          setRoomStatus("Enter the room code from the host screen.", true);
+          return;
+        }
+        setSetupMode("online");
+        $("roomShare").hidden = true;
+        $("startGame").disabled = true;
+        const joinName = $("onlineName").value.trim() || "Guest Scholar";
+        setRoomStatus(`Joining room ${roomCode}…`);
+        peer = new Peer(undefined, { debug: 1 });
+        peer.on("open", () => {
+          hostConnection = peer.connect(roomPeerId(roomCode), { reliable:true, serialization:"json" });
+          setupGuestConnection(hostConnection, joinName);
+        });
+        peer.on("error", err => {
+          setRoomStatus(`Join error: ${err.type || err.message || "connection failed"}. Check the code and host page.`, true);
+        });
+      }
+
+      function setupHostConnection(conn) {
+        conn.on("data", data => handleHostData(conn, data));
+        conn.on("close", () => {
+          const player = players.find(p => p.id === conn.playerId);
+          if (player) {
+            player.connected = false;
+            setRoomStatus(`${player.name} disconnected. They can rejoin before the next game.`, true);
+            renderOnlineRoster();
+            broadcastLobby();
+          }
+        });
+        conn.on("error", () => setRoomStatus("A player connection had an error.", true));
+      }
+
+      function handleHostData(conn, data) {
+        if (!data || typeof data !== "object") return;
+        if (data.type === "join") {
+          if (gameStarted) {
+            conn.send({ type:"reject", message:"The game has already started. Ask the host to restart after this round." });
+            return;
+          }
+          if (players.length >= 5) {
+            conn.send({ type:"reject", message:"This room is full." });
+            return;
+          }
+          const name = String(data.name || `Scholar ${players.length+1}`).trim().slice(0,18);
+          const playerId = `p${playerIdSeq++}`;
+          conn.playerId = playerId;
+          onlineConnections.push({ conn, playerId });
+          players.push(createPlayer(name || `Scholar ${players.length+1}`, players.length, playerId));
+          conn.send({ type:"joined", playerId, roomCode, players: players.map(cleanPlayer) });
+          setRoomStatus(`${name || "A player"} joined room ${roomCode}.`);
+          renderOnlineRoster();
+          broadcastLobby();
+          return;
+        }
+        if (data.type === "answer") {
+          if (!gameStarted || data.questionIndex !== questionIndex) return;
+          const index = players.findIndex(p => p.id === data.playerId);
+          if (index >= 0) recordOnlineChoice(index, Number(data.choice));
+        }
+      }
+
+      function setupGuestConnection(conn, joinName) {
+        conn.on("open", () => {
+          setRoomStatus("Connected to host. Waiting for the room roster…");
+          conn.send({ type:"join", name: joinName });
+        });
+        conn.on("data", handleGuestData);
+        conn.on("close", () => setRoomStatus("Disconnected from host. Ask the host to keep the room page open.", true));
+        conn.on("error", () => setRoomStatus("Connection to host failed. Check the room code and try again.", true));
+      }
+
+      function handleGuestData(data) {
+        if (!data || typeof data !== "object") return;
+        if (data.type === "reject") {
+          setRoomStatus(data.message || "The host rejected the connection.", true);
+          return;
+        }
+        if (data.type === "joined") {
+          myPlayerId = data.playerId;
+          roomCode = data.roomCode || roomCode;
+          players = (data.players || []).map(p => ({...p, relics: p.relics || []}));
+          setRoomStatus(`Joined room ${roomCode}. Waiting for the host to start.`);
+          renderOnlineRoster();
+          return;
+        }
+        if (data.type === "lobby") {
+          players = (data.players || []).map(p => ({...p, relics: p.relics || []}));
+          renderOnlineRoster();
+          return;
+        }
+        if (data.type === "state") {
+          applyRemoteState(data);
+        }
+      }
+
+      function sendToHost(message) {
+        if (hostConnection && hostConnection.open) hostConnection.send(message);
+        else setRoomStatus("Your answer could not be sent because the host connection is not open.", true);
+      }
+
+      function broadcastLobby() {
+        const payload = { type:"lobby", roomCode, players: players.map(cleanPlayer) };
+        onlineConnections.forEach(({conn}) => {
+          if (conn.open) conn.send(payload);
+        });
+      }
+
+      function broadcastGameState(modal = "game") {
+        if (playMode !== "host") return;
+        const payload = {
+          type:"state", modal, screen: modal === "final" ? "final" : "game",
+          roomCode, players: players.map(cleanPlayer), questionIndex,
+          zoneEnergy: [...zoneEnergy], logs: [...logs], answered,
+          roundChoices: [...roundChoices],
+          roundResults: roundResults.map(r => ({ playerIndex:r.playerIndex, choice:r.choice, correct:r.correct, points:r.points, notes:[...r.notes] })),
+          currentEventId: currentEvent?.id || null,
+          portalResolved
+        };
+        onlineConnections.forEach(({conn}) => {
+          if (conn.open) conn.send(payload);
+        });
+      }
+
+      function applyRemoteState(state) {
+        playMode = "guest";
+        gameStarted = state.screen !== "start";
+        players = (state.players || []).map(p => ({...p, relics: p.relics || []}));
+        questionIndex = state.questionIndex || 0;
+        zoneEnergy = state.zoneEnergy || [0,0,0,0,0];
+        logs = state.logs || [];
+        answered = !!state.answered;
+        roundChoices = state.roundChoices || Array(players.length).fill(null);
+        roundResults = (state.roundResults || []).map(r => ({ ...r, player: players[r.playerIndex], notes: r.notes || [] }));
+        currentEvent = eventDeck.find(e => e.id === state.currentEventId) || null;
+        portalResolved = !!state.portalResolved;
+        if (state.screen === "final") {
+          finishRemoteGame();
+          return;
+        }
+        showScreen($("gameScreen"));
+        renderSyncedGame(state.modal);
+      }
+
+      function showRemoteEvent() {
+        $("resultLayer").classList.remove("show");
+        $("eventIcon").textContent = currentEvent.icon;
+        $("eventTitle").textContent = currentEvent.name;
+        $("eventDescription").textContent = `${currentEvent.desc} Host is resolving this portal.`;
+        $("eventEffect").textContent = currentEvent.effect;
+        $("eventAction").innerHTML = `<div class="event-result">${portalResolved ? "Event resolved. Waiting for host to continue." : "Waiting for host action…"}</div>`;
+        $("continueGame").hidden = true;
+        $("eventLayer").classList.add("show");
+      }
+
+      function finishRemoteGame() {
+        const ranked = [...players].sort((a,b)=>b.points-a.points || b.energy-a.energy || b.relics.length-a.relics.length);
+        const winner = ranked[0] || { name:"" };
+        $("winnerName").textContent = winner.name;
+        const pct = repairPercent();
+        $("finalRepair").textContent = `${pct}%`;
+        $("ranking").innerHTML = ranked.map((p,i)=>`<div class="rank-row" style="--delay:${i*.1}s;--player:${p.color}">
+          <div class="rank-num">${i+1}</div><div class="rank-avatar">${p.avatar}</div>
+          <div class="rank-name"><strong>${escapeHtml(p.name)}</strong><span>${p.energy} energy · ${p.relics.length} relics · best tiebreak order</span></div>
+          <div class="rank-score">${p.points} pts</div></div>`).join("");
+        renderConfetti();
+        showScreen($("finalScreen"));
+        requestAnimationFrame(()=>setTimeout(()=>$("repairFill").style.width=`${pct}%`,100));
+      }
+
+      async function copyRoomLink() {
+        const link = roomJoinUrl();
+        try {
+          await navigator.clipboard.writeText(link);
+          setRoomStatus("Join link copied. Send it to your players.");
+        } catch (_) {
+          setRoomStatus(`Copy this join link: ${link}`, true);
+        }
+      }
+
       function startGame() {
-        const inputs = [...document.querySelectorAll(".name-input")];
-        players = inputs.map((input,i) => ({
-          name: input.value.trim() || `Scholar ${i+1}`,
-          avatar: avatarIcons[i], color: avatarColors[i], points:0, energy:0,
-          shields:1, combo:0, frozen:false, doubleNext:false, viralNext:false, relics:[]
-        }));
+        if (playMode === "guest") {
+          setRoomStatus("Waiting for the host to start the room.", true);
+          return;
+        }
+        if (playMode === "host") {
+          if (players.length < 2) {
+            setRoomStatus("Ask at least one more player to join before starting.", true);
+            return;
+          }
+          players.forEach(resetPlayerForGame);
+        } else {
+          const inputs = [...document.querySelectorAll(".name-input")];
+          players = inputs.map((input,i) => createPlayer(input.value.trim() || `Scholar ${i+1}`, i));
+          myPlayerId = null;
+        }
         questionIndex = 0; zoneEnergy = [0,0,0,0,0]; logs = []; answered = false;
+        answeringIndex = 0; roundChoices = []; roundResults = [];
+        portalResolved = false;
+        gameStarted = true;
         addLog("⏳", `${players.map(p=>p.name).join(", ")} entered the fractured timeline.`);
         showScreen($("gameScreen"));
         renderTurn();
+        if (playMode === "host") broadcastGameState("game");
       }
 
       function currentPlayer() { return players[questionIndex % players.length]; }
+      function answeringPlayer() { return players[answeringIndex] || players[0]; }
       function currentZone() { return questions[questionIndex].z; }
       function totalEnergy() { return zoneEnergy.reduce((a,b)=>a+b,0); }
       function repairPercent() { return Math.min(100, Math.round(totalEnergy() / 15 * 100)); }
@@ -511,7 +925,7 @@
       }
 
       function renderPlayers() {
-        const activeIndex = questionIndex % players.length;
+        const activeIndex = onlineActive() && !answered ? localPlayerIndex() : answered ? questionIndex % players.length : answeringIndex;
         $("players").innerHTML = players.map((p,i) => `
           <div class="player-card ${i===activeIndex?"active":""}" style="--player:${p.color}">
             <div class="player-avatar">${p.avatar}</div>
@@ -533,26 +947,75 @@
         if ($("eventLog")) renderLog();
       }
 
-      function renderTurn() {
-        answered = false;
+      function renderQuestionFrame() {
         const q = questions[questionIndex];
-        const p = currentPlayer();
         const z = zones[q.z];
         $("questionCard").style.setProperty("--zone-color", z.color);
         $("zoneChip").textContent = `${z.icon} ${z.name}`;
-        $("questionCount").textContent = `Question ${questionIndex+1} / ${questions.length}`;
         $("bossBadge").hidden = !q.boss;
         $("questionText").textContent = q.q;
-        $("turnLabel").textContent = `${p.avatar} ${p.name}'s turn`;
-        $("answers").innerHTML = q.a.map((a,i)=>`<button class="answer" type="button" data-answer="${i}"><span class="letter">${String.fromCharCode(65+i)}</span><span>${escapeHtml(a)}</span></button>`).join("");
+      }
+
+      function renderTurn() {
+        answered = false;
+        answeringIndex = 0;
+        roundChoices = Array(players.length).fill(null);
+        roundResults = [];
+        renderQuestionFrame();
+        renderTimeline();
+        renderAnswerPrompt();
+        renderLog();
+      }
+
+      function renderSyncedGame(modal) {
+        renderQuestionFrame();
+        renderTimeline();
+        if (answered) {
+          renderRevealedAnswers();
+          if (modal === "result") showGroupResult(questions[questionIndex], roundResults);
+          else $("resultLayer").classList.remove("show");
+        } else {
+          $("resultLayer").classList.remove("show");
+          renderAnswerPrompt();
+        }
+        if (modal === "event" && currentEvent) showRemoteEvent();
+        else $("eventLayer").classList.remove("show");
+        renderPlayers();
+        renderLog();
+      }
+
+      function renderAnswerPrompt() {
+        const q = questions[questionIndex];
+        const onlineIndex = onlineActive() ? localPlayerIndex() : -1;
+        const p = onlineActive() ? (players[onlineIndex] || players[0]) : answeringPlayer();
+        const answeredCount = roundChoices.filter(choice => choice !== null).length;
+        if (onlineActive()) {
+          const locked = onlineIndex >= 0 && roundChoices[onlineIndex] !== null;
+          $("questionCount").textContent = `Question ${questionIndex+1} / ${questions.length} · ${answeredCount}/${players.length} locked`;
+          $("turnLabel").textContent = locked ? `${p.avatar} ${p.name} locked in` : `${p.avatar} ${p.name} answer on this device`;
+        } else {
+          $("questionCount").textContent = `Question ${questionIndex+1} / ${questions.length} · Answer ${answeredCount+1} / ${players.length}`;
+          $("turnLabel").textContent = `${p.avatar} ${p.name} is answering`;
+        }
+        const shouldDisable = onlineActive() && (onlineIndex < 0 || roundChoices[onlineIndex] !== null);
+        $("answers").innerHTML = q.a.map((a,i)=>`<button class="answer" type="button" data-answer="${i}" ${shouldDisable?"disabled":""}><span class="letter">${String.fromCharCode(65+i)}</span><span>${escapeHtml(a)}</span></button>`).join("");
         $("answers").querySelectorAll("button").forEach(btn => btn.addEventListener("click", () => answerQuestion(Number(btn.dataset.answer))));
+        const statuses = players.map((player,i) => {
+          const done = roundChoices[i] !== null;
+          const active = onlineActive() ? i === onlineIndex && !done : i === answeringIndex && !answered;
+          const label = done ? "locked" : active ? "answering now" : "waiting";
+          return `<div class="answer-status ${done?"done":""} ${active?"active":""}"><span>${player.avatar}</span><span>${escapeHtml(player.name)} · ${label}</span></div>`;
+        }).join("");
         const buffs = [];
-        if (p.frozen) buffs.push('<span class="buff-chip frozen-note">❄ Frozen: you can repair the timeline, but earn no points this turn</span>');
+        if (p.frozen) buffs.push('<span class="buff-chip frozen-note">❄ Frozen: you can repair the timeline, but earn no points on this answer</span>');
         if (p.doubleNext) buffs.push('<span class="buff-chip">📰 Printing Press: next correct base score ×2</span>');
         if (p.viralNext) buffs.push('<span class="buff-chip">📲 Viral: next correct answer +8</span>');
         if (p.combo >= 2) buffs.push('<span class="buff-chip">🔥 One correct answer away from a combo bonus</span>');
-        $("buffRow").innerHTML = buffs.join("");
-        renderTimeline(); renderPlayers(); renderLog();
+        buffs.push(onlineActive()
+          ? '<span class="buff-chip">📱 Online room: everyone answers on their own phone</span>'
+          : `<span class="buff-chip">🌀 Portal leader after this question: ${escapeHtml(currentPlayer().name)}</span>`);
+        $("buffRow").innerHTML = `<div class="round-progress"><span>All players answer before reveal</span><span>${answeredCount}/${players.length} locked</span></div><div class="answer-status-grid">${statuses}</div>${buffs.join("")}`;
+        renderPlayers();
       }
 
       function awardRelic(player, relicName) {
@@ -568,20 +1031,78 @@
         return setBonus;
       }
 
+      function renderRevealedAnswers() {
+        const q = questions[questionIndex];
+        const correctChoice = q.c;
+        const wrongChoices = new Set(roundResults.filter(r => !r.correct).map(r => r.choice));
+        $("questionCount").textContent = `Question ${questionIndex+1} / ${questions.length} · Results`;
+        $("turnLabel").textContent = `Round ${questionIndex+1} results`;
+        $("answers").innerHTML = q.a.map((a,i)=>{
+          const answerClass = i === correctChoice ? "correct" : wrongChoices.has(i) ? "wrong" : "";
+          return `<button class="answer ${answerClass}" type="button" disabled><span class="letter">${String.fromCharCode(65+i)}</span><span>${escapeHtml(a)}</span></button>`;
+        }).join("");
+        const statuses = players.map((player,i) => {
+          const result = roundResults.find(r => r.playerIndex === i);
+          const label = result?.correct ? `+${result.points} pts` : "missed";
+          return `<div class="answer-status ${result?.correct?"done":""}"><span>${player.avatar}</span><span>${escapeHtml(player.name)} · ${label}</span></div>`;
+        }).join("");
+        $("buffRow").innerHTML = `<div class="round-progress"><span>Answer revealed</span><span>${roundResults.filter(r=>r.correct).length}/${players.length} correct</span></div><div class="answer-status-grid">${statuses}</div>`;
+        renderPlayers();
+      }
+
       function answerQuestion(choice) {
         if (answered) return;
+        if (playMode === "guest") {
+          const index = localPlayerIndex();
+          if (index < 0 || roundChoices[index] !== null) return;
+          roundChoices[index] = choice;
+          addLog("📝", `${players[index].name} locked an answer.`);
+          renderAnswerPrompt();
+          sendToHost({ type:"answer", playerId: myPlayerId, questionIndex, choice });
+          return;
+        }
+        if (playMode === "host") {
+          const index = localPlayerIndex();
+          if (index < 0 || roundChoices[index] !== null) return;
+          recordOnlineChoice(index, choice);
+          return;
+        }
+        roundChoices[answeringIndex] = choice;
+        addLog("📝", `${players[answeringIndex].name} locked an answer.`);
+        const nextIndex = roundChoices.findIndex(choice => choice === null);
+        if (nextIndex !== -1) {
+          answeringIndex = nextIndex;
+          renderAnswerPrompt();
+          return;
+        }
+        scoreRound();
+      }
+
+      function recordOnlineChoice(playerIndex, choice) {
+        if (answered || roundChoices[playerIndex] !== null) return;
+        roundChoices[playerIndex] = choice;
+        addLog("📝", `${players[playerIndex].name} locked an answer.`);
+        if (roundChoices.every(choice => choice !== null)) scoreRound();
+        else {
+          renderAnswerPrompt();
+          if (playMode === "host") broadcastGameState("game");
+        }
+      }
+
+      function scoreRound() {
         answered = true;
         const q = questions[questionIndex];
-        const p = currentPlayer();
+        roundResults = players.map((p,i) => scorePlayerAnswer(p, i, q, roundChoices[i]));
+        renderRevealedAnswers();
+        showGroupResult(q, roundResults);
+        renderTimeline(); renderPlayers();
+        if (playMode === "host") broadcastGameState("result");
+      }
+
+      function scorePlayerAnswer(p, playerIndex, q, choice) {
         const correct = choice === q.c;
         const wasFrozen = p.frozen;
         let points = 0, notes = [];
-        document.querySelectorAll(".answer").forEach((btn,i) => {
-          btn.disabled = true;
-          if (i === q.c) btn.classList.add("correct");
-          if (i === choice && !correct) btn.classList.add("wrong");
-        });
-
         if (correct) {
           p.combo += 1;
           p.energy += q.boss ? 2 : 1;
@@ -601,21 +1122,29 @@
           addLog(q.boss?"⚔️":"✅", `${p.name} answered correctly${points?` for +${points}`:" while frozen"}.`);
         } else {
           p.combo = 0;
-          addLog("❌", `${p.name} missed the question. The correct answer was “${q.a[q.c]}”.`);
+          addLog("❌", `${p.name} chose ${String.fromCharCode(65+choice)} and missed the question.`);
         }
         if (wasFrozen) p.frozen = false;
-        showResult(correct, points, q, notes);
-        renderTimeline(); renderPlayers();
+        return { player:p, playerIndex, choice, correct, points, notes };
       }
 
-      function showResult(correct, points, q, notes) {
+      function showGroupResult(q, results) {
+        const correctCount = results.filter(r => r.correct).length;
+        const totalPoints = results.reduce((sum,r) => sum + r.points, 0);
         const icon = $("resultIcon");
-        icon.textContent = correct ? "✓" : "✕";
-        icon.className = `result-icon ${correct?"good":"bad"}`;
-        $("resultTitle").textContent = correct ? (q.boss ? "Boss defeated!" : "Timeline repaired!") : "Timeline fracture!";
-        $("pointsFlash").textContent = correct ? (points ? `+${points} points` : "+0 points") : "Combo reset";
-        $("pointsFlash").style.background = correct ? "var(--gold)" : "var(--red)";
-        $("explanation").innerHTML = `<strong>${correct?"Correct!":"Correct answer: " + escapeHtml(q.a[q.c])}</strong><br>${escapeHtml(q.e)}${notes.length?`<br><br><strong>Turn effects:</strong> ${escapeHtml(notes.join(" · "))}`:""}`;
+        icon.textContent = correctCount ? "✓" : "✕";
+        icon.className = `result-icon ${correctCount?"good":"bad"}`;
+        $("resultTitle").textContent = q.boss ? "Boss round complete!" : "Round results!";
+        $("pointsFlash").textContent = `${correctCount}/${players.length} correct · +${totalPoints} points`;
+        $("pointsFlash").style.background = correctCount ? "var(--gold)" : "var(--red)";
+        const rows = results.map(r => {
+          const letter = String.fromCharCode(65+r.choice);
+          const effectText = r.notes.length ? ` · ${escapeHtml(r.notes.join(" · "))}` : "";
+          return `<div class="round-result ${r.correct?"good":"bad"}"><strong>${r.player.avatar} ${escapeHtml(r.player.name)}</strong><small>${r.correct?`+${r.points} pts`:"missed"} · chose ${letter}${effectText}</small></div>`;
+        }).join("");
+        $("explanation").innerHTML = `<strong>Correct answer: ${escapeHtml(q.a[q.c])}</strong><br>${escapeHtml(q.e)}<div class="round-results">${rows}</div>`;
+        $("openPortal").disabled = playMode === "guest";
+        $("openPortal").textContent = playMode === "guest" ? "Waiting for host..." : "Open History Portal →";
         $("resultLayer").classList.add("show");
         $("openPortal").focus();
       }
@@ -628,24 +1157,30 @@
       }
 
       function openPortal() {
+        if (playMode === "guest") return;
         $("resultLayer").classList.remove("show");
         currentEvent = weightedEvent();
+        portalResolved = false;
+        const leader = currentPlayer();
         $("eventIcon").textContent = currentEvent.icon;
         $("eventTitle").textContent = currentEvent.name;
-        $("eventDescription").textContent = currentEvent.desc;
+        $("eventDescription").textContent = `${currentEvent.desc} Portal leader: ${leader.avatar} ${leader.name}.`;
         $("eventEffect").textContent = currentEvent.effect;
         $("eventAction").innerHTML = "";
         $("continueGame").hidden = true;
         $("eventLayer").classList.add("show");
         prepareEvent(currentEvent);
+        if (playMode === "host") broadcastGameState("event");
       }
 
       function eventResult(message) {
+        portalResolved = true;
         $("eventAction").innerHTML = `<div class="event-result">${escapeHtml(message)}</div>`;
         $("continueGame").hidden = false;
         $("continueGame").focus();
         addLog(currentEvent.icon, message);
         renderPlayers();
+        if (playMode === "host") broadcastGameState("event");
       }
 
       function targetButtons(event) {
@@ -679,7 +1214,7 @@
           eventResult(`${actor.name} and ${target.name} swapped scores across the trade route!`);
         } else if (event.id === "freeze") {
           target.frozen = true;
-          eventResult(`${target.name} is frozen and cannot gain points on their next turn.`);
+          eventResult(`${target.name} is frozen and cannot gain points on their next answer.`);
         } else if (event.id === "smuggler") {
           if (!target.relics.length) {
             eventResult(`${target.name} had no relics to smuggle. The dealer vanished empty-handed.`);
@@ -754,10 +1289,14 @@
       }
 
       function advanceGame() {
+        if (playMode === "guest") return;
         $("eventLayer").classList.remove("show");
         questionIndex += 1;
         if (questionIndex >= questions.length) finishGame();
-        else renderTurn();
+        else {
+          renderTurn();
+          if (playMode === "host") broadcastGameState("game");
+        }
       }
 
       function finishGame() {
@@ -773,6 +1312,7 @@
         renderConfetti();
         showScreen($("finalScreen"));
         requestAnimationFrame(()=>setTimeout(()=>$("repairFill").style.width=`${pct}%`,100));
+        if (playMode === "host") broadcastGameState("final");
       }
 
       function renderConfetti() {
@@ -790,11 +1330,25 @@
 
       $("addPlayer").addEventListener("click",()=>{ if(playerCount<5){ playerCount++; renderNameInputs(); }});
       $("removePlayer").addEventListener("click",()=>{ if(playerCount>2){ playerCount--; renderNameInputs(); }});
+      $("sameDeviceMode").addEventListener("click",()=>setSetupMode("local"));
+      $("onlineRoomMode").addEventListener("click",()=>setSetupMode("online"));
+      $("createRoom").addEventListener("click",createOnlineRoom);
+      $("joinRoom").addEventListener("click",joinOnlineRoom);
+      $("copyRoomLink").addEventListener("click",copyRoomLink);
+      $("roomCodeInput").addEventListener("input",()=>$("roomCodeInput").value = $("roomCodeInput").value.toUpperCase());
       $("startGame").addEventListener("click",startGame);
       $("openPortal").addEventListener("click",openPortal);
       $("continueGame").addEventListener("click",advanceGame);
       $("playAgain").addEventListener("click",resetGame);
       renderNameInputs();
+      if (typeof URL !== "undefined" && window.location?.href) {
+        const joinCode = new URL(window.location.href).searchParams.get("room");
+        if (joinCode) {
+          setSetupMode("online");
+          $("roomCodeInput").value = joinCode.toUpperCase();
+          setRoomStatus(`Room code ${joinCode.toUpperCase()} loaded. Enter your name and tap Join room.`);
+        }
+      }
     })();
   </script>
 </body>
