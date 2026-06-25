@@ -246,9 +246,20 @@
     @keyframes eventPop { from { transform: scale(0) rotate(-20deg); opacity: 0; } }
     .event-type { color: var(--cyan); text-transform: uppercase; letter-spacing: .15em; font-size: .67rem; font-weight: 950; }
     .event-effect { margin: 12px 0; color: white !important; font-weight: 850; }
+    .skill-timer { margin: 8px auto 15px; max-width: 320px; padding: 10px 12px; border-radius: 14px; background: rgba(85,237,255,.1); border: 1px solid rgba(85,237,255,.24); color: #dffbff; font-weight: 950; }
+    .skill-timer strong { color: var(--gold); font-variant-numeric: tabular-nums; }
+    .skill-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; margin: 15px 0; text-align: left; }
+    .skill-card {
+      min-height: 155px; color: white; border: 1px solid rgba(255,255,255,.18); border-radius: 16px; padding: 13px;
+      cursor: pointer; background: linear-gradient(145deg,rgba(255,255,255,.1),rgba(85,237,255,.05)); box-shadow: inset 0 0 22px rgba(255,255,255,.035);
+    }
+    .skill-card:hover:not(:disabled), .target-btn:hover, .bid-btn:hover:not(:disabled) { background: rgba(85,237,255,.16); border-color: var(--cyan); transform: translateY(-1px); }
+    .skill-card:disabled { opacity: .45; cursor: not-allowed; }
+    .skill-card-icon { display: block; font-size: 1.85rem; margin-bottom: 6px; }
+    .skill-card-name { display: block; color: var(--gold); font-weight: 1000; margin-bottom: 5px; }
+    .skill-card-effect { color: #d6d1ef; font-size: .78rem; line-height: 1.35; }
     .target-area { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin: 17px 0; }
-    .target-btn, .bid-btn { min-width: 92px; color: white; border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.08); border-radius: 12px; padding: 10px; cursor: pointer; font-weight: 800; }
-    .target-btn:hover, .bid-btn:hover:not(:disabled) { background: rgba(85,237,255,.16); border-color: var(--cyan); }
+    .target-btn, .bid-btn { min-width: 92px; color: white; border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.08); border-radius: 12px; padding: 10px; cursor: pointer; font-weight: 800; transition: .16s ease; }
     .event-result { margin: 13px 0; padding: 11px; border-radius: 12px; color: #e8e4fb; background: rgba(116,240,167,.09); border: 1px solid rgba(116,240,167,.2); }
     .auction-pass { margin: 15px 0; padding: 14px; border-radius: 13px; background: rgba(255,214,90,.08); border: 1px solid rgba(255,214,90,.18); }
     .auction-pass strong { color: var(--gold); display: block; margin-top: 3px; font-size: 1.1rem; }
@@ -294,6 +305,7 @@
       .timeline { overflow-x: auto; grid-template-columns: repeat(5, 145px); padding-bottom: 7px; }
       .timeline::before { display: none; }
       .answers { grid-template-columns: 1fr; }
+      .skill-grid { grid-template-columns: 1fr; }
       .side-column { grid-template-columns: 1fr; }
       .topbar { align-items: flex-start; }
       .question-head { flex-wrap: wrap; }
@@ -326,7 +338,7 @@
         <div class="start-grid">
           <section class="glass setup-card">
             <h2 class="card-title">Assemble your Time Scholars</h2>
-            <p class="card-copy">Add 2–5 players. Everyone has 20 seconds to answer; missed answers lock automatically, and portal skills resolve by themselves.</p>
+            <p class="card-copy">Add 2–5 players. Everyone has 20 seconds to answer. After each round, the portal leader gets 20 seconds to use a skill card or skip.</p>
             <div class="mode-tabs" role="group" aria-label="Game mode">
               <button id="sameDeviceMode" class="mode-tab active" type="button">Same device</button>
               <button id="onlineRoomMode" class="mode-tab" type="button">Online room</button>
@@ -363,7 +375,7 @@
             <h2 class="card-title">How to survive history</h2>
             <div class="how-steps">
               <div class="how-step"><div class="step-icon">🧠</div><div><strong>20-second answers</strong><span>Each player gets a visible countdown. If time runs out, the game locks “no answer”.</span></div></div>
-              <div class="how-step"><div class="step-icon">🌀</div><div><strong>Auto skills</strong><span>After every question, portal events choose targets, apply boosts, and continue automatically.</span></div></div>
+              <div class="how-step"><div class="step-icon">🃏</div><div><strong>Manual skill cards</strong><span>After every question, choose a card, choose a target if needed, or press Skip before the timer ends.</span></div></div>
               <div class="how-step"><div class="step-icon">🛡️</div><div><strong>Score together</strong><span>Every correct answer earns points and charges the active timeline crystal.</span></div></div>
               <div class="how-step"><div class="step-icon">🏆</div><div><strong>Rule the timeline</strong><span>After 25 questions, the highest score becomes Master of the English Timeline.</span></div></div>
             </div>
@@ -517,9 +529,8 @@
       const avatarColors = ["#7d5ce2","#e05d72","#2f9f80","#397fc3","#d59335"];
       const relicIcons = Object.fromEntries(zones.map(z => [z.relic, z.relicIcon]));
       const ANSWER_TIME_LIMIT = 20;
+      const SKILL_TIME_LIMIT = 20;
       const NO_ANSWER = -1;
-      const AUTO_PORTAL_DELAY = 2400;
-      const AUTO_CONTINUE_DELAY = 2200;
       let playerCount = 2;
       let players = [];
       let questionIndex = 0;
@@ -530,6 +541,10 @@
       let roundChoices = [];
       let roundResults = [];
       let currentEvent = null;
+      let skillChoices = [];
+      let skillPhaseActive = false;
+      let skillDeadline = 0;
+      let skillTimerId = null;
       let auctionState = null;
       const onlinePrefix = "wordheist-room-";
       let playMode = "local";
@@ -543,8 +558,6 @@
       let gameStarted = false;
       let answerDeadline = 0;
       let answerTimerId = null;
-      let autoPortalTimer = null;
-      let autoContinueTimer = null;
 
       const $ = id => document.getElementById(id);
       const screens = [$("startScreen"), $("gameScreen"), $("finalScreen")];
@@ -563,11 +576,14 @@
         answerTimerId = null;
       }
 
-      function clearAutoTimers() {
-        if (autoPortalTimer) clearTimeout(autoPortalTimer);
-        if (autoContinueTimer) clearTimeout(autoContinueTimer);
-        autoPortalTimer = null;
-        autoContinueTimer = null;
+      function clearSkillTimer() {
+        if (skillTimerId) clearInterval(skillTimerId);
+        skillTimerId = null;
+      }
+
+      function clearRoundTimers() {
+        clearAnswerTimer();
+        clearSkillTimer();
       }
 
       function updateTimerDisplay(msLeft = ANSWER_TIME_LIMIT * 1000) {
@@ -601,20 +617,30 @@
         return answered || !answerDeadline ? 0 : Math.max(0, answerDeadline - Date.now());
       }
 
-      function scheduleAutoPortal() {
-        if (playMode === "guest") return;
-        if (autoPortalTimer) clearTimeout(autoPortalTimer);
-        autoPortalTimer = setTimeout(() => {
-          if (answered) openPortal();
-        }, AUTO_PORTAL_DELAY);
+      function updateSkillTimerDisplay(msLeft = SKILL_TIME_LIMIT * 1000) {
+        const seconds = Math.max(0, Math.ceil(msLeft / 1000));
+        const node = $("skillTimerSeconds");
+        if (node) node.textContent = `${seconds}s`;
       }
 
-      function scheduleAutoContinue() {
-        if (playMode === "guest") return;
-        if (autoContinueTimer) clearTimeout(autoContinueTimer);
-        autoContinueTimer = setTimeout(() => {
-          if (portalResolved) advanceGame();
-        }, AUTO_CONTINUE_DELAY);
+      function startSkillTimer(remainingMs = SKILL_TIME_LIMIT * 1000) {
+        clearSkillTimer();
+        if (!skillPhaseActive || portalResolved) return;
+        skillDeadline = Date.now() + Math.max(0, remainingMs);
+        const tick = () => {
+          const msLeft = Math.max(0, skillDeadline - Date.now());
+          updateSkillTimerDisplay(msLeft);
+          if (msLeft <= 0) {
+            clearSkillTimer();
+            if (playMode !== "guest") skipSkillPhase("Time ran out. No skill card was used.");
+          }
+        };
+        tick();
+        skillTimerId = setInterval(tick, 250);
+      }
+
+      function remainingSkillMs() {
+        return !skillPhaseActive || !skillDeadline ? 0 : Math.max(0, skillDeadline - Date.now());
       }
 
       function createPlayer(name, index, id) {
@@ -747,8 +773,7 @@
       }
 
       function closeOnlineRoom() {
-        clearAnswerTimer();
-        clearAutoTimers();
+        clearRoundTimers();
         onlineConnections.forEach(item => {
           try { item.conn.close(); } catch (_) {}
         });
@@ -931,6 +956,9 @@
           timeRemainingMs: remainingAnswerMs(),
           roundChoices: [...roundChoices],
           roundResults: roundResults.map(r => ({ playerIndex:r.playerIndex, choice:r.choice, correct:r.correct, points:r.points, notes:[...r.notes] })),
+          skillChoices: skillChoices.map(event => event.id),
+          skillPhaseActive,
+          skillRemainingMs: remainingSkillMs(),
           currentEventId: currentEvent?.id || null,
           portalResolved
         };
@@ -949,26 +977,41 @@
         answered = !!state.answered;
         roundChoices = state.roundChoices || Array(players.length).fill(null);
         roundResults = (state.roundResults || []).map(r => ({ ...r, player: players[r.playerIndex], notes: r.notes || [] }));
+        skillChoices = (state.skillChoices || []).map(id => eventDeck.find(e => e.id === id)).filter(Boolean);
+        skillPhaseActive = !!state.skillPhaseActive;
+        skillDeadline = Date.now() + Math.max(0, state.skillRemainingMs || 0);
         currentEvent = eventDeck.find(e => e.id === state.currentEventId) || null;
         portalResolved = !!state.portalResolved;
         if (state.screen === "final") {
-          clearAnswerTimer();
+          clearRoundTimers();
           finishRemoteGame();
           return;
         }
         showScreen($("gameScreen"));
         if (!answered) startAnswerTimer(state.timeRemainingMs ?? ANSWER_TIME_LIMIT * 1000);
         else clearAnswerTimer();
+        if (state.modal === "event" && skillPhaseActive && !portalResolved) startSkillTimer(state.skillRemainingMs ?? SKILL_TIME_LIMIT * 1000);
+        else if (!skillPhaseActive) clearSkillTimer();
         renderSyncedGame(state.modal);
       }
 
       function showRemoteEvent() {
         $("resultLayer").classList.remove("show");
-        $("eventIcon").textContent = currentEvent.icon;
-        $("eventTitle").textContent = currentEvent.name;
-        $("eventDescription").textContent = `${currentEvent.desc} Host is resolving this portal.`;
-        $("eventEffect").textContent = currentEvent.effect;
-        $("eventAction").innerHTML = `<div class="event-result">${portalResolved ? "Event resolved. Waiting for host to continue." : "Waiting for host action…"}</div>`;
+        if (skillPhaseActive && !portalResolved && !currentEvent) {
+          $("eventIcon").textContent = "🃏";
+          $("eventTitle").textContent = "Skill Card Phase";
+          $("eventDescription").textContent = "The host is choosing a skill card for the portal leader.";
+          $("eventEffect").textContent = "20 seconds to use a card, choose a target, or skip.";
+          $("eventAction").innerHTML = `${skillTimerHtml()}${readonlySkillCardsHtml()}<div class="event-result">Waiting for host choice…</div>`;
+          updateSkillTimerDisplay(remainingSkillMs());
+        } else {
+          const event = currentEvent || { icon:"⏭️", name:"Skill Phase", desc:"The skill phase is being resolved.", effect:"Waiting for host." };
+          $("eventIcon").textContent = event.icon;
+          $("eventTitle").textContent = event.name;
+          $("eventDescription").textContent = `${event.desc} Host is resolving this skill.`;
+          $("eventEffect").textContent = event.effect;
+          $("eventAction").innerHTML = `<div class="event-result">${portalResolved ? "Skill phase resolved. Waiting for host to continue." : "Waiting for host action…"}</div>`;
+        }
         $("continueGame").hidden = true;
         $("eventLayer").classList.add("show");
       }
@@ -999,8 +1042,7 @@
       }
 
       function startGame() {
-        clearAnswerTimer();
-        clearAutoTimers();
+        clearRoundTimers();
         if (playMode === "guest") {
           setRoomStatus("Waiting for the host to start the room.", true);
           return;
@@ -1079,7 +1121,11 @@
       }
 
       function renderTurn() {
-        clearAutoTimers();
+        clearSkillTimer();
+        skillPhaseActive = false;
+        skillChoices = [];
+        currentEvent = null;
+        portalResolved = false;
         answered = false;
         answeringIndex = 0;
         roundChoices = Array(players.length).fill(null);
@@ -1137,9 +1183,9 @@
         if (p.viralNext) buffs.push('<span class="buff-chip">📲 Viral: next correct answer +8</span>');
         if (p.combo >= 2) buffs.push('<span class="buff-chip">🔥 One correct answer away from a combo bonus</span>');
         buffs.push(onlineActive()
-          ? '<span class="buff-chip">📱 Online room: everyone answers on their own phone</span>'
-          : `<span class="buff-chip">🌀 Portal leader after this question: ${escapeHtml(currentPlayer().name)}</span>`);
-        buffs.push('<span class="buff-chip">✨ Skills and portal choices are automatic</span>');
+          ? '<span class="buff-chip">📱 Online room: everyone answers on their own phone; host controls skill cards</span>'
+          : `<span class="buff-chip">🃏 Skill leader after this question: ${escapeHtml(currentPlayer().name)}</span>`);
+        buffs.push('<span class="buff-chip">✨ After the result: 20 seconds to use or skip a skill card</span>');
         $("buffRow").innerHTML = `<div class="round-progress"><span>All players answer before reveal</span><span>${answeredCount}/${players.length} locked</span></div><div class="answer-status-grid">${statuses}</div>${buffs.join("")}`;
         renderPlayers();
       }
@@ -1308,9 +1354,8 @@
         }).join("");
         $("explanation").innerHTML = `<strong>Correct answer: ${escapeHtml(q.a[q.c])}</strong><br>${escapeHtml(q.e)}<div class="round-results">${rows}</div>`;
         $("openPortal").disabled = playMode === "guest";
-        $("openPortal").textContent = playMode === "guest" ? "Waiting for host..." : "Auto-opening portal…";
+        $("openPortal").textContent = playMode === "guest" ? "Waiting for host..." : "Choose Skill Card →";
         $("resultLayer").classList.add("show");
-        if (playMode !== "guest") scheduleAutoPortal();
       }
 
       function weightedEvent() {
@@ -1320,66 +1365,117 @@
         return eventDeck[0];
       }
 
+      function skillDeck() {
+        return eventDeck.filter(event => event.id !== "auction");
+      }
+
+      function drawSkillCards(count = 3) {
+        const pool = [...skillDeck()];
+        const cards = [];
+        while (cards.length < count && pool.length) {
+          const total = pool.reduce((sum,event) => sum + event.weight, 0);
+          let roll = Math.random() * total;
+          let index = 0;
+          for (; index < pool.length; index++) {
+            roll -= pool[index].weight;
+            if (roll <= 0) break;
+          }
+          cards.push(pool.splice(Math.min(index, pool.length - 1), 1)[0]);
+        }
+        return cards;
+      }
+
+      function skillTimerHtml() {
+        return `<div class="skill-timer">Skill choice time: <strong id="skillTimerSeconds">20s</strong></div>`;
+      }
+
+      function skillCardHtml(event, disabled = false) {
+        const targetText = event.target ? "Needs target" : "Self / instant";
+        return `<button class="skill-card" type="button" data-skill="${event.id}" ${disabled?"disabled":""}>
+          <span class="skill-card-icon">${event.icon}</span>
+          <span class="skill-card-name">${escapeHtml(event.name)}</span>
+          <span class="skill-card-effect">${escapeHtml(event.effect)}<br><small>${targetText}</small></span>
+        </button>`;
+      }
+
+      function readonlySkillCardsHtml() {
+        return `<div class="skill-grid">${skillChoices.map(event => skillCardHtml(event, true)).join("")}</div>`;
+      }
+
       function openPortal() {
         if (playMode === "guest") return;
-        if (autoPortalTimer) clearTimeout(autoPortalTimer);
-        autoPortalTimer = null;
         $("resultLayer").classList.remove("show");
-        currentEvent = weightedEvent();
+        skillChoices = drawSkillCards(3);
+        currentEvent = null;
         portalResolved = false;
+        skillPhaseActive = true;
         const leader = currentPlayer();
-        $("eventIcon").textContent = currentEvent.icon;
-        $("eventTitle").textContent = currentEvent.name;
-        $("eventDescription").textContent = `${currentEvent.desc} Portal leader: ${leader.avatar} ${leader.name}.`;
-        $("eventEffect").textContent = currentEvent.effect;
-        $("eventAction").innerHTML = "";
+        $("eventIcon").textContent = "🃏";
+        $("eventTitle").textContent = "Choose a Skill Card";
+        $("eventDescription").textContent = `Portal leader: ${leader.avatar} ${leader.name}. Choose one skill card, choose a target if needed, or skip.`;
+        $("eventEffect").textContent = "You have 20 seconds for this skill phase.";
         $("continueGame").hidden = true;
         $("eventLayer").classList.add("show");
-        prepareEvent(currentEvent);
+        renderSkillChoices();
+        startSkillTimer();
         if (playMode === "host") broadcastGameState("event");
       }
 
-      function eventResult(message) {
+      function renderSkillChoices() {
+        $("eventAction").innerHTML = `${skillTimerHtml()}
+          <div class="skill-grid">${skillChoices.map(event => skillCardHtml(event)).join("")}</div>
+          <div class="target-area"><button id="skipSkill" class="target-btn" type="button">Skip skill</button></div>`;
+        $("eventAction").querySelectorAll(".skill-card").forEach(btn => btn.addEventListener("click", () => selectSkillCard(btn.dataset.skill)));
+        $("skipSkill").addEventListener("click", () => skipSkillPhase(`${currentPlayer().name} skipped the skill card phase.`));
+        updateSkillTimerDisplay(remainingSkillMs() || SKILL_TIME_LIMIT * 1000);
+      }
+
+      function selectSkillCard(skillId) {
+        if (!skillPhaseActive || portalResolved || playMode === "guest") return;
+        const event = skillChoices.find(card => card.id === skillId);
+        if (!event) return;
+        currentEvent = event;
+        const leader = currentPlayer();
+        $("eventIcon").textContent = event.icon;
+        $("eventTitle").textContent = event.name;
+        $("eventDescription").textContent = `${leader.avatar} ${leader.name} selected this skill card.`;
+        $("eventEffect").textContent = event.effect;
+        if (event.target) targetButtons(event);
+        else prepareEvent(event);
+        if (playMode === "host") broadcastGameState("event");
+      }
+
+      function skipSkillPhase(message = "No skill card was used.") {
+        if (portalResolved || playMode === "guest") return;
+        eventResult(message, "⏭️");
+      }
+
+      function eventResult(message, icon = currentEvent?.icon || "🃏") {
+        clearSkillTimer();
+        skillPhaseActive = false;
         portalResolved = true;
         $("eventAction").innerHTML = `<div class="event-result">${escapeHtml(message)}</div>`;
         $("continueGame").hidden = false;
-        $("continueGame").textContent = playMode === "guest" ? "Waiting for host..." : "Auto-continuing…";
+        $("continueGame").textContent = playMode === "guest" ? "Waiting for host..." : "Next Question →";
         $("continueGame").disabled = playMode === "guest";
-        addLog(currentEvent.icon, message);
+        addLog(icon, message);
         renderPlayers();
         if (playMode === "host") broadcastGameState("event");
-        scheduleAutoContinue();
       }
 
       function targetButtons(event) {
         const current = questionIndex % players.length;
         const candidates = players.map((p,i)=>({p,i})).filter(x => x.i !== current);
-        let html = '<div class="target-area">';
+        let html = `${skillTimerHtml()}<div class="target-area">`;
         candidates.forEach(({p,i}) => html += `<button type="button" class="target-btn" data-target="${i}">${p.avatar} ${escapeHtml(p.name)}<br><small>${p.points} pts · 🛡 ${p.shields}</small></button>`);
-        html += "</div>";
+        html += '<button id="skipSkill" class="target-btn" type="button">Skip skill</button></div>';
         $("eventAction").innerHTML = html;
-        $("eventAction").querySelectorAll(".target-btn").forEach(btn => btn.addEventListener("click",()=>resolveTarget(event, Number(btn.dataset.target))));
-      }
-
-      function chooseAutoTarget(event) {
-        const actorIndex = questionIndex % players.length;
-        const candidates = players.map((p,i)=>({p,i})).filter(x => x.i !== actorIndex);
-        if (!candidates.length) return actorIndex;
-        if (event.id === "smuggler") {
-          return candidates.sort((a,b)=>b.p.relics.length-a.p.relics.length || b.p.points-a.p.points)[0].i;
-        }
-        if (event.id === "trade") {
-          return candidates.sort((a,b)=>b.p.points-a.p.points)[0].i;
-        }
-        return candidates.sort((a,b)=>b.p.points-a.p.points || a.p.shields-b.p.shields)[0].i;
-      }
-
-      function autoResolveTarget(event) {
-        const targetIndex = chooseAutoTarget(event);
-        const actor = currentPlayer();
-        const target = players[targetIndex];
-        $("eventAction").innerHTML = `<div class="event-result">Auto skill: ${escapeHtml(actor.name)} targets ${escapeHtml(target.name)}.</div>`;
-        setTimeout(() => resolveTarget(event, targetIndex), 700);
+        $("eventAction").querySelectorAll("[data-target]").forEach(btn => btn.addEventListener("click",()=>resolveTarget(event, Number(btn.dataset.target))));
+        $("skipSkill").addEventListener("click", event => {
+          event.stopPropagation();
+          skipSkillPhase(`${currentPlayer().name} decided not to use ${currentEvent?.name || "the selected card"}.`);
+        });
+        updateSkillTimerDisplay(remainingSkillMs() || SKILL_TIME_LIMIT * 1000);
       }
 
       function useShield(target, action) {
@@ -1392,8 +1488,10 @@
       }
 
       function resolveTarget(event, targetIndex) {
+        if (portalResolved) return;
         const actor = currentPlayer();
         const target = players[targetIndex];
+        if (!target) return;
         if (useShield(target, `the ${event.name}`)) return;
         if (event.id === "viking") {
           const amount = Math.min(5,target.points); target.points -= amount; actor.points += amount;
@@ -1417,8 +1515,9 @@
       }
 
       function prepareEvent(event) {
+        if (portalResolved) return;
         const p = currentPlayer();
-        if (event.target) { autoResolveTarget(event); return; }
+        if (event.target) { targetButtons(event); return; }
         if (event.auction) { beginAuction(); return; }
         if (event.id === "norman") {
           let total = 0, blocked = [];
@@ -1447,26 +1546,16 @@
       }
 
       function beginAuction() {
-        auctionState = { index:players.length, bids: players.map(autoBidForPlayer) };
-        const bidText = auctionState.bids.map((bid,i)=>`${players[i].avatar} ${players[i].name}: ${bid}`).join(" · ");
-        $("eventAction").innerHTML = `<div class="event-result">Auto auction bids locked: ${escapeHtml(bidText)}</div>`;
-        setTimeout(resolveAuction, 700);
-      }
-
-      function autoBidForPlayer(player, index) {
-        const leaderPoints = Math.max(...players.map(p => p.points));
-        const behind = Math.max(0, leaderPoints - player.points);
-        if (player.points >= 8 && behind >= 8) return 8;
-        if (player.points >= 5 && behind >= 4) return 5;
-        if (player.points >= 3 && index === questionIndex % players.length) return 3;
-        return 0;
+        auctionState = { index:0, bids:[] };
+        renderAuctionBidder();
       }
 
       function renderAuctionBidder() {
         const p = players[auctionState.index];
-        $("eventAction").innerHTML = `<div class="auction-pass">Pass the device to<strong>${p.avatar} ${escapeHtml(p.name)}</strong><small>Your bid will be hidden immediately.</small></div>
+        $("eventAction").innerHTML = `${skillTimerHtml()}<div class="auction-pass">Pass the device to<strong>${p.avatar} ${escapeHtml(p.name)}</strong><small>Your bid will be hidden immediately.</small></div>
           <div class="target-area">${[0,3,5,8].map(b=>`<button class="bid-btn" type="button" data-bid="${b}" ${b>p.points?"disabled":""}>Bid ${b}</button>`).join("")}</div>`;
         $("eventAction").querySelectorAll(".bid-btn").forEach(btn=>btn.addEventListener("click",()=>recordBid(Number(btn.dataset.bid))));
+        updateSkillTimerDisplay(remainingSkillMs() || SKILL_TIME_LIMIT * 1000);
       }
 
       function recordBid(bid) {
@@ -1490,8 +1579,8 @@
 
       function advanceGame() {
         if (playMode === "guest") return;
-        if (autoContinueTimer) clearTimeout(autoContinueTimer);
-        autoContinueTimer = null;
+        clearSkillTimer();
+        skillPhaseActive = false;
         $("continueGame").disabled = false;
         $("continueGame").textContent = "Continue the Heist →";
         $("eventLayer").classList.remove("show");
@@ -1504,8 +1593,7 @@
       }
 
       function finishGame() {
-        clearAnswerTimer();
-        clearAutoTimers();
+        clearRoundTimers();
         const ranked = [...players].sort((a,b)=>b.points-a.points || b.energy-a.energy || b.relics.length-a.relics.length);
         const winner = ranked[0];
         $("winnerName").textContent = winner.name;
@@ -1527,8 +1615,7 @@
       }
 
       function resetGame() {
-        clearAnswerTimer();
-        clearAutoTimers();
+        clearRoundTimers();
         playerCount = Math.min(5,Math.max(2,players.length || 2));
         renderNameInputs();
         [...document.querySelectorAll(".name-input")].forEach((input,i)=>input.value=players[i]?.name || "");
